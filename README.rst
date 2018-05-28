@@ -13,7 +13,7 @@ bds
         :target: https://bds.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
-:version: 0.1.0
+:version: 0.1.1
 
 
 Interfaces for an in-memory datastore and calc framework using marshmallow + pandas

@@ -26,4 +26,20 @@ Interfaces for an in-memory datastore and calc framework using marshmallow + pan
 Features
 --------
 
-* TODO
+This set of interfaces are designed to help you take your data science project/notebook
+and easily turn it into a serializable web-ready API without having to depend on a specific
+application or web-framework.
+
+This can help you quickly scale up your scripts and create uniformity between your projects!
+
+bds provides:
+
+* A declarative style in memory datastore (collections)
+* interfaces and base classes for processing and scaling up your calc scripts (calc, factory)
+* consistent API for moving your data between json, py-objs, and pandas dataframes
+
+Coming Soon
+-----------
+
+* A generative orm-style query/filter API for collections based on pandas
+* ability to set unique constraints on collection objects

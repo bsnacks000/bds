@@ -93,3 +93,6 @@ install: clean ## install the package to the active Python's site-packages
 install-dev: clean
 	pip install -r requirements_dev.txt
 	pip install -e .
+
+test-single-module: clean   ## call like this:  make test_module module=tests.<<module_name>> will run a single module test via nostests
+	nosetests -s -v $(module) --debug=$(module)

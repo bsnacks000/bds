@@ -8,8 +8,11 @@ from bds.collection import InternalObject, BaseSerializer, BaseCollection
 from bds.exceptions import InternalNotDefinedError, CollectionLoadError
 
 import pandas as pd
+from pandas.testing import assert_frame_equal
 from marshmallow import fields
 from marshmallow.exceptions import ValidationError
+
+from pprint import pprint
 
 
 class InternalSerializer(BaseSerializer):
@@ -39,7 +42,7 @@ class TestInternalObject(unittest.TestCase):
 class TestBaseSerializer(unittest.TestCase):
 
     def test_internal_class_kwarg(self):
-        s = InternalSerializer(internal=InternalObject)
+        s = InternalSerializer(internal=InternalObject, strict=True)
         self.assertTrue(hasattr(s, '_InternalClass'))
 
 
@@ -51,9 +54,9 @@ class TestBaseSerializer(unittest.TestCase):
 
     def test_serializer_post_load_hook_returns_internal_class(self):
 
-        s = InternalSerializer(internal=InternalObject)
+        s = InternalSerializer(internal=InternalObject, strict=True)
         data = [{'bdbid': 1, 'name': 'hi-there'}, {'bdbid': 2, 'name': 'hi-ho'}]
-        obj = s.load(data, many=True)
+        obj, _ = s.load(data, many=True)
         for i in obj:
             self.assertIsInstance(i, InternalObject)
 
@@ -163,3 +166,12 @@ class TestBaseCollection(unittest.TestCase):
         base2.load_data(self.data)
 
         new_base = base + base2
+
+    def test_base_collection_to_dataframe(self):
+
+        base = BaseCollection()
+        base.load_data(self.data)
+
+        test = base.to_dataframe()
+
+        assert_frame_equal(test, pd.DataFrame(self.data))

@@ -2,7 +2,8 @@
 History
 =======
 
-0.0.0 (2018-05-28)
+0.1.0 (2018-05-28)
 ------------------
 
-* First release on PyPI.
+* Port initial API from bema project
+* Port original unittests

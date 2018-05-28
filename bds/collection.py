@@ -109,7 +109,7 @@ class BaseCollection(AbstractCollection):
 
     def __init__(self):
         self._data = []
-        self._serializer = self.serializer_class(internal=self.__class__.internal_class)
+        self._serializer = self.serializer_class(internal=self.__class__.internal_class, strict=True)
 
 
     @property
@@ -124,8 +124,8 @@ class BaseCollection(AbstractCollection):
         """
         if len(self._data) == 0:
             return self._data
-        return self.serializer.dump(self._data, many=True)
-
+        marshal_result = self.serializer.dump(self._data, many=True) # NOTE returns MarshalResult object
+        return marshal_result.data  # NOTE differs from 3.0.0 -- only returns records here
 
     @property
     def internal_class(self):
@@ -176,14 +176,17 @@ class BaseCollection(AbstractCollection):
                 records = records.to_dict('records')
 
             # append to the data dictionary
-            self._data += self.serializer.load(records, many=True)
+            # NOTE changing this to handle tuples in marsh 2.x
+            valid, _ = self.serializer.load(records, many=True)
+            self._data += valid
 
         except TypeError as err:
             l.error(err)
             raise CollectionLoadError('A Serializer must be instantiated with valid fields') from err
 
         except ValidationError as err:
-            l.error(err)
+            errors = err.messages
+            l.error(errors)
             raise
 
         except Exception as err:

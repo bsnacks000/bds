@@ -11,7 +11,7 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = ['future', 'pandas', 'marshmallow==3.0.0b11' ]
+requirements = ['future', 'pandas', 'marshmallow' ]
 
 setup_requirements = [ ]
 
@@ -39,7 +39,7 @@ setup(
     include_package_data=True,
     keywords='bds',
     name='bds',
-    packages=find_packages(exclude=['bds']),
+    packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
     setup_requires=setup_requirements,
     test_suite='nose.collector',
     tests_require=test_requirements,

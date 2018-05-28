@@ -1,0 +1,10 @@
+pip>=10.0.1
+bumpversion
+wheel
+watchdog
+flake8
+tox
+coverage
+Sphinx
+twine
+nose

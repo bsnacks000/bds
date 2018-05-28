@@ -41,6 +41,6 @@ setup(
     test_suite='nose.collector',
     tests_require=test_requirements,
     url='https://github.com/bsnacks000/bds',
-    version='0.1.1',
+    version='0.1.2',
     zip_safe=False,
 )

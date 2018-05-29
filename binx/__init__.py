@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Top-level package for bds."""
+"""Top-level package for binx."""
 
 __author__ = """bsnacks000"""
 __email__ = 'bsnacks000@gmail.com'

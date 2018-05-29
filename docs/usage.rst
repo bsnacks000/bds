@@ -2,6 +2,6 @@
 Usage
 =====
 
-To use bds in a project::
+To use binx in a project::
 
-    import bds
+    import binx

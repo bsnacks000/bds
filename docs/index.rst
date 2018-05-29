@@ -1,4 +1,4 @@
-Welcome to bds's documentation!
+Welcome to binx's documentation!
 ======================================
 
 .. toctree::

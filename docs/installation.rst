@@ -8,8 +8,8 @@ Installation
 Stable release
 --------------
 
-To install bds, run this command in your terminal:
+To install binx, run this command in your terminal:
 
 .. code-block:: console
 
-    $ pip install --index-url https://test.pypi.org/simple/ bds
+    $ pip install --index-url https://test.pypi.org/simple/ binx

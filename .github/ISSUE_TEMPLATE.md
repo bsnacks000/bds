@@ -1,4 +1,4 @@
-* bds version:
+* binx version:
 * Python version:
 * Operating System:
 

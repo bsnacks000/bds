@@ -4,8 +4,8 @@ from builtins import *
 import unittest
 import os
 
-from bds.collection import InternalObject, BaseSerializer, BaseCollection
-from bds.exceptions import InternalNotDefinedError, CollectionLoadError
+from binx.collection import InternalObject, BaseSerializer, BaseCollection
+from binx.exceptions import InternalNotDefinedError, CollectionLoadError
 
 import pandas as pd
 from pandas.testing import assert_frame_equal

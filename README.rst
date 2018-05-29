@@ -1,16 +1,16 @@
 ===
-bds
+binx
 ===
 
 
-.. image:: https://img.shields.io/pypi/v/bds.svg
-        :target: https://pypi.python.org/pypi/bds
+.. image:: https://img.shields.io/pypi/v/binx.svg
+        :target: https://pypi.python.org/pypi/binx
 
-.. image:: https://img.shields.io/travis/bsnacks000/bds.svg
-        :target: https://travis-ci.org/bsnacks000/bds
+.. image:: https://img.shields.io/travis/bsnacks000/binx.svg
+        :target: https://travis-ci.org/bsnacks000/binx
 
-.. image:: https://readthedocs.org/projects/bds/badge/?version=latest
-        :target: https://bds.readthedocs.io/en/latest/?badge=latest
+.. image:: https://readthedocs.org/projects/binx/badge/?version=latest
+        :target: https://binx.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
 :version: 0.1.2
@@ -20,7 +20,7 @@ Interfaces for an in-memory datastore and calc framework using marshmallow + pan
 
 
 * Free software: MIT license
-* Documentation: https://bds.readthedocs.io.
+* Documentation: https://binx.readthedocs.io.
 
 
 Features
@@ -32,7 +32,7 @@ application or web-framework.
 
 This can help you quickly scale up your scripts and create uniformity between your projects!
 
-bds provides:
+binx provides:
 
 * A declarative style in memory datastore (collections)
 * interfaces and base classes for processing and scaling up your calc scripts (calc, factory)

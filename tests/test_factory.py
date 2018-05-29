@@ -8,9 +8,9 @@ from builtins import *
 import unittest
 import os
 
-from bds.collection import BaseSerializer, InternalObject, BaseCollection
-from bds.calc import AbstractCalc, AbstractCalcResult
-from bds.factory import BaseFactory
+from binx.collection import BaseSerializer, InternalObject, BaseCollection
+from binx.calc import AbstractCalc, AbstractCalcResult
+from binx.factory import BaseFactory
 
 import pandas as pd
 from pandas.testing import assert_frame_equal

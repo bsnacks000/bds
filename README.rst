@@ -1,6 +1,6 @@
-===
+====
 binx
-===
+====
 
 
 .. image:: https://img.shields.io/pypi/v/binx.svg
@@ -18,6 +18,7 @@ binx
 
 Interfaces for an in-memory datastore and calc framework using marshmallow + pandas
 
+==^..^==
 
 * Free software: MIT license
 * Documentation: https://binx.readthedocs.io.

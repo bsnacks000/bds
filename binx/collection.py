@@ -7,22 +7,37 @@ import abc
 import pandas as pd
 from marshmallow import Schema, post_load
 from marshmallow.exceptions import ValidationError
+
 from .exceptions import InternalNotDefinedError, CollectionLoadError
+
+from .registry import register_internal
+
 from .utils import DataFrameDtypeConversion
 
 import logging
 l = logging.getLogger(__name__)
 
+# a place for the registry of internals after they are constructed
 
 
-class InternalObject(object):
+class InternalMeta(type):
+    """ a metaclass that adds the internal object to a registry
+    """
+
+    def __new__(cls, klassname, bases, attrs):
+        klass = super().__new__(cls, klassname, bases, attrs)
+        register_internal(klass)  # here is your register function
+        return klass
+
+
+class InternalObject(metaclass=InternalMeta):
     """ a namespace/base class for instance checking for an internally used model object
     It is otherwise a normal python object. _Internals are used as medium for
     serialization and deserialization and their declarations bound with Collections and enforced by Serializers
     """
 
     def __init__(self, **kwargs):
-        self.__dict__.update(kwargs)
+        self.__dict__.update(**kwargs)
 
     def __repr__(self):
         """ default is to print all available attrs in vars

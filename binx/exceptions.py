@@ -20,3 +20,7 @@ class FactoryProcessorFailureError(BinxError):
 class FactoryCreateValidationError(BinxError):
     """ wraps a marshmallow validation error in the create method of the factory
     """
+
+class InternalRegistryError(BinxError):
+    """ raised if a classname already exists in the registry
+    """

@@ -4,13 +4,13 @@ python:
 - 3.5
 install: pip install -U tox-travis
 script: tox
-# deploy:
-#   provider: pypi
-#   distributions: sdist bdist_wheel
-#   user: bsnacks000
-#   password:
-#     secure: JfxfDGQDMurdJBwWlIO3zCMSfjbYN+FDqQAexjfbtSUDxRQDIkzhiFutyl2dSBfEnvkkNRClND0lLawZL2EEdNmqVwD6pmx4qays43VD8J2dIHVUa1aN9jcUal2DXtRwJ/AU9jWdkar+sc4tJGrbN7ujOXMYipYNQwwzo0JVa6hsJQRBqCICBBBB5qWZFKDxRFmY00rgJVRAEUxG79wpjAfhcUGre30dqNWTIyvlRgHVjihd0UmRfhj87eVUzrbYQYY4+w853EuIdADsipX4HCxvBy8QFYROJOJjyTu5BE8nNj2998PnUZyT+2QFll1iaABBPjKm2V97/E1xHjFAEUWTdmVI5rvEKf2+Ev9aCImtABvudjMD0tj0edZX5AfQJeMK98QAlrU/o1HTDWmoAWzOFIEwFzS/KP8zgfVzQBz9eSpgXOutlI9UfyInwMe+CKJ6nPlWvdtbrer1eLqGGHyVWAwhX7oI2GmTuZzDTJD9C1+JbON8u0+w16xoq3zdpFj5ZNGtofc1pEvZGMryvf1HmLRoZtYKtcZGjwNSQXLezaS+a2hUZNmc/yUAwvLQjC3JpARN9y6cbwGmKVe4wVCixKugsdJKCrhknkOBIUvUKNwf6jpuT2QynQs2Nhsmbcowqa7UBKFvxtoY76ObkuI8m4Tt4OSAjd+c82B4/lY=
-#   on:
-#     tags: true
-#     repo: bsnacks000/binx
-#     python: 3.6
+deploy:
+  provider: pypi
+  distributions: sdist bdist_wheel
+  user: bsnacks000
+  password:
+    secure: JfxfDGQDMurdJBwWlIO3zCMSfjbYN+FDqQAexjfbtSUDxRQDIkzhiFutyl2dSBfEnvkkNRClND0lLawZL2EEdNmqVwD6pmx4qays43VD8J2dIHVUa1aN9jcUal2DXtRwJ/AU9jWdkar+sc4tJGrbN7ujOXMYipYNQwwzo0JVa6hsJQRBqCICBBBB5qWZFKDxRFmY00rgJVRAEUxG79wpjAfhcUGre30dqNWTIyvlRgHVjihd0UmRfhj87eVUzrbYQYY4+w853EuIdADsipX4HCxvBy8QFYROJOJjyTu5BE8nNj2998PnUZyT+2QFll1iaABBPjKm2V97/E1xHjFAEUWTdmVI5rvEKf2+Ev9aCImtABvudjMD0tj0edZX5AfQJeMK98QAlrU/o1HTDWmoAWzOFIEwFzS/KP8zgfVzQBz9eSpgXOutlI9UfyInwMe+CKJ6nPlWvdtbrer1eLqGGHyVWAwhX7oI2GmTuZzDTJD9C1+JbON8u0+w16xoq3zdpFj5ZNGtofc1pEvZGMryvf1HmLRoZtYKtcZGjwNSQXLezaS+a2hUZNmc/yUAwvLQjC3JpARN9y6cbwGmKVe4wVCixKugsdJKCrhknkOBIUvUKNwf6jpuT2QynQs2Nhsmbcowqa7UBKFvxtoY76ObkuI8m4Tt4OSAjd+c82B4/lY=
+  on:
+    tags: true
+    repo: bsnacks000/binx
+    python: 3.6

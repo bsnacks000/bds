@@ -37,6 +37,7 @@ class InternalObject(metaclass=InternalMeta):
     """
 
     def __init__(self, **kwargs):
+        # NOTE that this method will get overridden in the make_class factory method below
         self.__dict__.update(**kwargs)
 
     def __repr__(self):

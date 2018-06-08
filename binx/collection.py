@@ -5,7 +5,8 @@ from builtins import *
 
 import abc
 import pandas as pd
-from marshmallow import Schema, post_load
+import numpy as np
+from marshmallow import Schema, post_load, fields
 from marshmallow.exceptions import ValidationError
 
 from .exceptions import InternalNotDefinedError, CollectionLoadError
@@ -53,6 +54,21 @@ class InternalObject(metaclass=InternalMeta):
 
 class BaseSerializer(Schema):
 
+    numpy_map = {
+
+        fields.Integer: np.dtype('int'),
+        fields.Float: np.dtype('float'),
+        fields.Str: np.dtype('str'),
+        fields.Date: np.dtype('M'),
+        fields.DateTime: np.dtype('M'),
+        fields.List: np.dtype('O'),
+        fields.Bool: np.dtype('bool'),
+        fields.Dict: np.dtype('O'),
+        fields.Nested: np.dtype('O')
+
+    }
+
+
     def __init__(self, *args, **kwargs):
         """ overrides Schema to include a internal object. These are instantiated with the serializer
         and used for loading and validating data
@@ -70,6 +86,16 @@ class BaseSerializer(Schema):
         """ loads and validates an internal class object """
         return self._InternalClass(**data)
 
+
+    def get_numpy_fields(self):
+        """ returns a dictionary of column names and numpy dtypes based on the ma_np_map dictionary.
+        Collections will use this to create more mem-optimized dataframes
+        """
+        out = {}
+        for field_name in self._declared_fields.keys():
+            ma_klass = self.__class__._declared_fields[field_name]
+            out[field_name] = self.numpy_map.get(type(ma_klass)) or np.dtype('O')
+        return out
 
 class AbstractCollection(abc.ABC):
     """Defines an interface for Collection objects. This includes a valid marshmallow
@@ -228,9 +254,6 @@ class BaseCollection(AbstractCollection):
 
 
 
-
-
-
 class AbstractCollectionBuilder(abc.ABC):
     """ An interface for the CollectionBuilder. A build method takes a subclass of BaseSerializer
     and creates a Collection class dynamically.
@@ -273,8 +296,8 @@ class CollectionBuilder(AbstractCollectionBuilder):
     def _parse_names(self, name):
         """ makes sure the user provided name is cleaned up
         """
-        coll_name = name.capitalize() + 'Collection'
-        internal_name = name.capitalize() + 'Internal'
+        coll_name = name + 'Collection'
+        internal_name = name+ 'Internal'
         return coll_name, internal_name
 
 

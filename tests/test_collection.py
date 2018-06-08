@@ -8,6 +8,7 @@ from binx.collection import InternalObject, BaseSerializer, BaseCollection
 from binx.exceptions import InternalNotDefinedError, CollectionLoadError
 
 import pandas as pd
+import numpy as np
 from pandas.testing import assert_frame_equal
 from marshmallow import fields
 from marshmallow.exceptions import ValidationError
@@ -60,7 +61,15 @@ class TestBaseSerializer(unittest.TestCase):
         for i in obj:
             self.assertIsInstance(i, InternalObject)
 
+    def test_serializer_get_numpy_dtypes(self):
 
+        s = InternalSerializer(internal=InternalObject, strict=True)
+        data = [{'bdbid': 1, 'name': 'hi-there'}, {'bdbid': 2, 'name': 'hi-ho'}]
+        obj, _ = s.load(data, many=True)
+
+        out = s.get_numpy_fields()
+        self.assertEqual(out['bdbid'], np.dtype('int64'))
+        self.assertEqual(out['name'], np.dtype('<U'))
 
 class TestBaseCollection(unittest.TestCase):
 

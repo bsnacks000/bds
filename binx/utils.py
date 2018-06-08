@@ -29,6 +29,19 @@ class RecordUtils(object):
         return records
 
 
+    def records_to_columns(self, records):
+        """ convert record format to column format
+        """
+        return {k: [d[k] for d in records] for k in records[0]}
+
+
+    def columns_to_records(self, column_dict):
+        """ convert column_dict format to record format
+        """
+        return [dict(zip(column_dict, d)) for d in zip(*column_dict.values())]
+
+
+
 
 class DataFrameDtypeConversion(object):
 

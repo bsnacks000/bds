@@ -269,11 +269,12 @@ class CollectionBuilder(AbstractCollectionBuilder):
         class_attrs = {'serializer_class': serializer_class, 'internal_class': internal_class}
         return type(name, (base_class, ), class_attrs)
 
+
     def _parse_names(self, name):
         """ makes sure the user provided name is cleaned up
         """
-        coll_name = name.captialize() + 'Collection'
-        internal_name = name.captialize() + 'Internal'
+        coll_name = name.capitalize() + 'Collection'
+        internal_name = name.capitalize() + 'Internal'
         return coll_name, internal_name
 
 
@@ -284,7 +285,7 @@ class CollectionBuilder(AbstractCollectionBuilder):
         return list(vars(serializer_class)['_declared_fields'].keys())
 
 
-    def build_internal(self, name, serializer_class):
+    def _build_internal(self, name, serializer_class):
         """ constructs and registers the internal object for the collection.
         Returns a subclass of InternalObject. This is used internally in the classes
         build method, but also can be used to
@@ -294,11 +295,15 @@ class CollectionBuilder(AbstractCollectionBuilder):
         return klass
 
 
-    def build(self, serializer_class):
+    def build(self, serializer_class, internal_only=False):
         """ dynamically creates and returns a Collection class given a serializer
         and identifier.
         """
 
         coll_name, internal_name = self._parse_names(self.name) # create the col name
-        internal_class = self.build_internal(internal_name, serializer_class) # create the internal class
+        internal_class = self._build_internal(internal_name, serializer_class) # create the internal class
+
+        if internal_only:
+            return internal_class
+
         return self._make_collection_class(coll_name, serializer_class, internal_class, base_class=BaseCollection) # pass in the serializer

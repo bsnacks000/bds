@@ -4,7 +4,7 @@ from builtins import *
 import unittest
 import os
 
-from binx.registry import register_internal, get_class_from_registry
+from binx.registry import register_internal, get_class_from_internal_registry, get_class_from_collection_registry
 from binx.collection import InternalObject
 from binx.exceptions import InternalRegistryError
 
@@ -29,7 +29,7 @@ class TestRegistry(unittest.TestCase):
 
         module = self.internal.__module__ # use the path name of the internal object on setUp
         clsname = TestInternal.__name__
-        obj = get_class_from_registry('.'.join([module, clsname]))
+        obj = get_class_from_internal_registry('.'.join([module, clsname]))
 
         self.assertIsInstance(obj(4,5,6), TestInternal)
 
@@ -37,7 +37,7 @@ class TestRegistry(unittest.TestCase):
     def test_internal_registry_raises_InternalRegistryError_if_not_in_registry(self):
 
         with self.assertRaises(InternalRegistryError):
-            obj = get_class_from_registry('SomeClass')
+            obj = get_class_from_internal_registry('SomeClass')
 
 
     def test_registry_raises_if_two_classes_have_same_name(self):

@@ -24,3 +24,7 @@ class FactoryCreateValidationError(BinxError):
 class InternalRegistryError(BinxError):
     """ raised if a classname already exists in the registry
     """
+
+class CollectionRegistryError(BinxError):
+    """ raised if a classname already exists in the collection registry 
+    """

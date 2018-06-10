@@ -11,7 +11,7 @@ from marshmallow.exceptions import ValidationError
 
 from .exceptions import InternalNotDefinedError, CollectionLoadError
 
-from .registry import register_internal
+from .registry import register_internal, register_collection
 
 from .utils import DataFrameDtypeConversion, RecordUtils
 
@@ -25,9 +25,9 @@ class InternalMeta(type):
     """ a metaclass that adds the internal object to a registry
     """
 
-    def __new__(cls, klassname, bases, attrs):
-        klass = super().__new__(cls, klassname, bases, attrs)
-        register_internal(klass)  # here is your register function
+    def __new__(cls, classname, bases, attrs):
+        klass = super().__new__(cls, classname, bases, attrs)
+        register_internal(klass) 
         return klass
 
 
@@ -53,6 +53,11 @@ class InternalObject(metaclass=InternalMeta):
 
 
 class BaseSerializer(Schema):
+    """The BaseSerializer overrides Schema to include a internal to dump associated InternalObjects.
+    These are instantiated with the serializer and used for loading and validating data.
+    It also provides a mapping of numpy dtypes to a select amount of marshmallow field name which helps optimize
+    memory in the to_dataframe object
+    """
 
     numpy_map = {
 
@@ -70,9 +75,7 @@ class BaseSerializer(Schema):
 
 
     def __init__(self, *args, **kwargs):
-        """ overrides Schema to include a internal object. These are instantiated with the serializer
-        and used for loading and validating data
-        """
+
         if 'internal' in kwargs:
             self._InternalClass = kwargs.pop('internal')
         else:
@@ -97,11 +100,23 @@ class BaseSerializer(Schema):
             out[field_name] = self.numpy_map.get(type(ma_klass)) or np.dtype('O')
         return out
 
-class AbstractCollection(abc.ABC):
-    """Defines an interface for Collection objects. This includes a valid marshmallow
-    serializer class, a data list object iterablem, load_data method with validation
-    """
 
+class CollectionMeta(type):
+
+    def __new__(cls, classname, bases, attrs):
+        klass = super().__new__(cls, classname, bases, attrs)
+        register_collection(klass)
+        return klass
+
+# compose a mixed Metaclass that registers and provides an abstract interface
+AbstractCollectionMeta = type('AbstractCollectionMeta', (abc.ABC, CollectionMeta), {})
+
+class AbstractCollection(object, metaclass=AbstractCollectionMeta):
+    """Defines an interface for Collection objects. This includes a valid marshmallow
+    serializer class, a data list object iterablem, load_data method with validation.
+    Collections are also registered so this AbstractCollection uses AbstractCollectionMeta as
+    a metaclass
+    """
 
     @property
     @abc.abstractmethod

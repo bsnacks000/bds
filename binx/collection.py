@@ -206,13 +206,13 @@ class BaseCollection(AbstractCollection):
         else:
             raise TypeError('Only Collections of the same class can be concatenated')
 
-    def load_data(self, records, from_df=False):
+    def load_data(self, records):
         """default implementation. Defaults to handling lists of python-dicts (records). from_df=True will allow
         direct from dataframe serialization as a convenience
         #TODO -- create a drop_duplicates option and use pandas to drop the dupes
         """
         try:
-            if from_df:
+            if isinstance(records, pd.DataFrame):
                 util = DataFrameDtypeConversion()
                 records = util.df_nan_to_none(records)
                 records = records.to_dict('records')

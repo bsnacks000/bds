@@ -10,9 +10,7 @@ from marshmallow import Schema, post_load, fields
 from marshmallow.exceptions import ValidationError
 
 from .exceptions import InternalNotDefinedError, CollectionLoadError
-
-from .registry import register_internal, register_collection
-
+from .registry import register_collection
 from .utils import DataFrameDtypeConversion, RecordUtils
 
 import logging
@@ -21,36 +19,17 @@ l = logging.getLogger(__name__)
 # a place for the registry of internals after they are constructed
 
 
-class InternalMeta(type):
-    """ a metaclass that adds the internal object to a registry
-    """
-
-    def __new__(cls, classname, bases, attrs):
-        klass = super().__new__(cls, classname, bases, attrs)
-        register_internal(klass) 
-        return klass
-
-
-class InternalObject(metaclass=InternalMeta):
-    """ a namespace/base class for instance checking for an internally used model object
+class InternalObject(object):
+    """ a namespace class for instance checking for an internally used model object
     It is otherwise a normal python object. _Internals are used as medium for
-    serialization and deserialization and their declarations bound with Collections and enforced by Serializers
+    serialization and deserialization and their declarations bound with Collections and enforced by Serializers.
+    It can be inherited from or used as a Mixin.
     """
+    is_binx_internal = True
+    registered_colls = set()   #NOTE these are collections. A coll's metaclass hook appends any collection objects here
 
-    def __init__(self, **kwargs):
-        # NOTE that this method will get overridden in the make_class factory method below
-        self.__dict__.update(**kwargs)
-
-    def __repr__(self):
-        """ default is to print all available attrs in vars
-        """
-        name = "<{} ".format(self.__class__.__name__)
-        for k, attr in vars(self).items():
-            name += "{}: {}, ".format(k, attr)
-        name += ">"
-        return name
-
-
+    def __init__(self, *args, **kwargs):
+        self.__dict__.update(kwargs)
 
 class BaseSerializer(Schema):
     """The BaseSerializer overrides Schema to include a internal to dump associated InternalObjects.
@@ -58,6 +37,7 @@ class BaseSerializer(Schema):
     It also provides a mapping of numpy dtypes to a select amount of marshmallow field name which helps optimize
     memory in the to_dataframe object
     """
+    registered_colls = set()
 
     numpy_map = {
 
@@ -164,6 +144,12 @@ class BaseCollection(AbstractCollection):
     serializer_class = BaseSerializer   # must be overridden with a valid marshmallow schema and _Internal
     internal_class = InternalObject
 
+    def __new__(cls, *args, **kwargs):
+        cls.serializer_class.registered_colls.add(cls)  #NOTE add a new subclass collection to the internal and internal class
+        cls.internal_class.registered_colls.add(cls)
+        inst = super(BaseCollection, cls).__new__(cls, *args, **kwargs)
+        return inst
+
     def __init__(self):
         self._data = []
         self._serializer = self.serializer_class(internal=self.__class__.internal_class, strict=True)
@@ -185,7 +171,7 @@ class BaseCollection(AbstractCollection):
         return marshal_result.data  # NOTE differs from 3.0.0 -- only returns records here
 
     @property
-    def internal_class(self):
+    def internal(self):
         """ returns a class of the internal object
         """
         return self.__class__.internal_class
@@ -219,7 +205,6 @@ class BaseCollection(AbstractCollection):
             return new_inst
         else:
             raise TypeError('Only Collections of the same class can be concatenated')
-
 
     def load_data(self, records, from_df=False):
         """default implementation. Defaults to handling lists of python-dicts (records). from_df=True will allow

@@ -14,6 +14,17 @@ import logging
 l = logging.getLogger(__name__)
 
 
+class ObjUtils(object):
+
+    def get_fully_qualified_path(self, obj):
+        """returns the fully qualified path of the class that defines this instance"""
+        module = obj.__class__.__module__ # use the path name of the internal object on setUp
+        clsname = obj.__class__.__name__
+        full = '.'.join([module,clsname])
+        return full
+
+
+
 class RecordUtils(object):
 
     def replace_nan_with_none(self, records):

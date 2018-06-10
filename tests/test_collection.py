@@ -171,7 +171,6 @@ class TestBaseCollection(unittest.TestCase):
             self.assertIsInstance(i, InternalObject)
 
 
-
     def test_base_collection_is_iterable(self):
 
         base = BaseCollection()
@@ -199,6 +198,7 @@ class TestBaseCollection(unittest.TestCase):
 
         new_base = base + base2
 
+
     def test_base_collection_to_dataframe(self):
 
         base = BaseCollection()
@@ -207,6 +207,7 @@ class TestBaseCollection(unittest.TestCase):
         test = base.to_dataframe()
 
         assert_frame_equal(test, pd.DataFrame(self.data))
+
 
     def test_base_collection_dataframe_with_dtypes(self):
 
@@ -230,3 +231,14 @@ class TestBaseCollection(unittest.TestCase):
         self.assertTrue(df.isnull().values.any())
 
         BaseCollection.serializer_class = InternalSerializer #NOTE must patch this back here
+
+
+    def test_new_collection_instances_register_on_serializer_and_internal(self):
+
+        base = BaseCollection()
+
+        test = BaseCollection in base.serializer.registered_colls
+        self.assertTrue(test)
+
+        BaseCollection in base.internal.registered_colls
+        self.assertTrue(test)

@@ -165,7 +165,7 @@ class TestBaseCollection(unittest.TestCase):
         df = pd.DataFrame(self.data)
         base = BaseCollection()
 
-        base.load_data(df, from_df=True)
+        base.load_data(df)
 
         for i in base._data:
             self.assertIsInstance(i, InternalObject)

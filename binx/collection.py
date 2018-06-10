@@ -13,7 +13,7 @@ from .exceptions import InternalNotDefinedError, CollectionLoadError
 
 from .registry import register_internal
 
-from .utils import DataFrameDtypeConversion
+from .utils import DataFrameDtypeConversion, RecordUtils
 
 import logging
 l = logging.getLogger(__name__)
@@ -59,8 +59,8 @@ class BaseSerializer(Schema):
         fields.Integer: np.dtype('int'),
         fields.Float: np.dtype('float'),
         fields.Str: np.dtype('str'),
-        fields.Date: np.dtype('M'),
-        fields.DateTime: np.dtype('M'),
+        fields.Date: np.dtype('datetime64[ns]'),
+        fields.DateTime: np.dtype('datetime64[ns]'),
         fields.List: np.dtype('O'),
         fields.Bool: np.dtype('bool'),
         fields.Dict: np.dtype('O'),
@@ -232,8 +232,26 @@ class BaseCollection(AbstractCollection):
             raise
 
         except Exception as err:
-            l.error(err)
+            l.error(err) #memoized property until it changes
             raise CollectionLoadError('An error occurred while loading and validating records') from err
+
+
+    def _dataframe_with_dtypes(self, data):
+        """ converts records to column format
+        """
+        rutil = RecordUtils()
+        dfutil = DataFrameDtypeConversion()
+        col_data = rutil.records_to_columns(data)
+        dtype_map = self.serializer.get_numpy_fields()
+
+        # iterate columns and construct a dictionary of pd.Series with correct-dtype
+        df_data = {} # a dictionary of pd.Series with dtypes keyed by col names
+        for col, dtype in dtype_map.items():
+            df_data[col] = pd.Series(col_data[col], dtype=dtype)
+
+        df = pd.DataFrame(df_data)
+        df = dfutil.df_none_to_nan(df)
+        return df
 
 
     def to_dataframe(self):
@@ -241,8 +259,7 @@ class BaseCollection(AbstractCollection):
         pd.DataFrame
         converts any columns that can be converted to datetime
         """
-        df = pd.DataFrame(self.data)
-        df = df.apply(lambda col: pd.to_datetime(col, errors='ignore') if col.dtypes == object else col, axis=0)
+        df = self._dataframe_with_dtypes(self.data)
         return df
 
 

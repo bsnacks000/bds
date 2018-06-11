@@ -23,8 +23,8 @@ def register_collection(cls):
     _collection_registry[fullpath] = (cls, {
         'serializer_class': cls.serializer_class,
         'internal_class': cls.internal_class,
-        'registered_adapters': [],  #NOTE these are the classes registered adapters
-        'adaptable_from': []   #NOTE these are other collection objects a coll can be adapted from
+        'registered_adapters': set(),  #NOTE these are the classes registered adapters
+        'adaptable_from': set()   #NOTE these are other collection objects a coll can be adapted from
     })
 
 
@@ -41,10 +41,52 @@ def get_class_from_collection_registry(classname):
 def register_adapter_to_collection(classname, adapter):
     """ appends an adapter to the klass object
     """
-    _collection_registry[classname][1]['registered_adapters'].append(adapter)
+    _collection_registry[classname][1]['registered_adapters'].add(adapter)
 
 
 def register_adaptable_collection(classname, coll):
     """ appends an adaptable collection to a classes list of adaptable collections
     """
-    _collection_registry[classname][1]['adaptable_from'].append(coll)
+    _collection_registry[classname][1]['adaptable_from'].add(coll)
+
+
+def _make_cc_graph():
+    """ returns a graph of connected collections. This is given as a flat dictionary of sets
+    using the 'adaptable_from' sets for each graph. This is used by adapter path to return a
+    path of classes connecting two nodes
+    """
+    graph = {}
+    for name, entry in _collection_registry.items():
+        graph[entry[0]] = entry[1]['adaptable_from']
+    return graph
+
+def bfs_shortest_path(graph, start, end):
+    """ a generic bfs search algo
+    """
+    def _bfs_paths(graph, start, end):
+        # bfs using a generator. should return shortest path if any for an iteration
+        queue = [(start, [start])]
+        while queue:
+            (vertex, path) = queue.pop(0)
+            for next_vertex in graph[vertex] - set(path):
+                if next_vertex == end:
+                    yield path + [next_vertex]
+                else:
+                    queue.append((next_vertex, path + [next_vertex]))
+
+    try:
+        return next(_bfs_paths(graph, start, end))
+    except StopIteration:
+        return []
+
+def adapter_path(from_class, end_class):
+    """ traverses the registry and builds a class path of adapters to a target using
+    by looking at each nodes 'adaptable_from' set. It will traverse the graph until all possibilities
+    are exhausted. If it finds a matching adaptable, it returns the path of adapter objects that
+    are needed to adapt the schema. If no path is found it returns an empty list
+    """
+
+    current_graph = _make_cc_graph()
+    shortest_path = bfs_shortest_path(current_graph, from_class, end_class)
+
+    

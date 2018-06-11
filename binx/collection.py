@@ -10,7 +10,7 @@ from marshmallow import Schema, post_load, fields
 from marshmallow.exceptions import ValidationError
 
 from .exceptions import InternalNotDefinedError, CollectionLoadError
-from .registry import register_collection
+from .registry import register_collection, get_class_from_collection_registry
 from .utils import DataFrameDtypeConversion, RecordUtils
 
 import logging
@@ -155,6 +155,11 @@ class BaseCollection(AbstractCollection):
         self._serializer = self.serializer_class(internal=self.__class__.internal_class, strict=True)
 
 
+    @classmethod
+    def get_fully_qualified_class_path(cls):
+        return cls.__module__ + '.' + cls.__name__
+
+
     @property
     def serializer(self):
         """ returns an ma serializer. Used for validation and instantiation """
@@ -205,6 +210,11 @@ class BaseCollection(AbstractCollection):
             return new_inst
         else:
             raise TypeError('Only Collections of the same class can be concatenated')
+
+    def _resolve_adapter(self, input_collection):
+        """ attempts to resolve
+        """
+
 
     def load_data(self, records):
         """default implementation. Defaults to handling lists of python-dicts (records). from_df=True will allow
@@ -337,7 +347,10 @@ class CollectionBuilder(AbstractCollectionBuilder):
 
     def build(self, serializer_class, internal_only=False):
         """ dynamically creates and returns a Collection class given a serializer
-        and identifier.
+        and identifier. If internal_only is set to True then this will only return the internal.
+        This is useful if you are using a declarative approach to defining the collections and want to
+        add or override some of the base behavior
+
         """
 
         coll_name, internal_name = self._parse_names(self.name) # create the col name

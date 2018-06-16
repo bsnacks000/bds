@@ -16,6 +16,8 @@ from .utils import DataFrameDtypeConversion, RecordUtils
 import logging
 l = logging.getLogger(__name__)
 
+
+
 # a place for the registry of internals after they are constructed
 
 
@@ -97,6 +99,11 @@ class AbstractCollection(object, metaclass=AbstractCollectionMeta):
     Collections are also registered so this AbstractCollection uses AbstractCollectionMeta as
     a metaclass
     """
+
+    @abc.abstractmethod
+    def get_fully_qualified_class_path(self):
+        """ reaches into the registry and gets the fully qualified class path"""
+
 
     @property
     @abc.abstractmethod
@@ -212,13 +219,31 @@ class BaseCollection(AbstractCollection):
             raise TypeError('Only Collections of the same class can be concatenated')
 
     def _resolve_adapter(self, input_collection):
-        """ attempts to resolve
+        """ attempts to resolve the adapter chain
+        TODO: implement
         """
 
 
+    def _dataframe_with_dtypes(self, data):
+        """ converts records to column format
+        """
+        rutil = RecordUtils()
+        dfutil = DataFrameDtypeConversion()
+        col_data = rutil.records_to_columns(data)
+        dtype_map = self.serializer.get_numpy_fields()
+
+        # iterate columns and construct a dictionary of pd.Series with correct-dtype
+        df_data = {} # a dictionary of pd.Series with dtypes keyed by col names
+        for col, dtype in dtype_map.items():
+            df_data[col] = pd.Series(col_data[col], dtype=dtype)
+
+        df = pd.DataFrame(df_data)
+        df = dfutil.df_none_to_nan(df)
+        return df
+
+
     def load_data(self, records):
-        """default implementation. Defaults to handling lists of python-dicts (records). from_df=True will allow
-        direct from dataframe serialization as a convenience
+        """default implementation. Defaults to handling lists of python-dicts (records).
         #TODO -- create a drop_duplicates option and use pandas to drop the dupes
         """
         try:
@@ -239,29 +264,12 @@ class BaseCollection(AbstractCollection):
         except ValidationError as err:
             errors = err.messages
             l.error(errors)
-            raise
+            raise CollectionValidationError('A ValidationError occurred while trying to load {}'.format(self.__class__.__name__)) from err
 
         except Exception as err:
             l.error(err) #memoized property until it changes
             raise CollectionLoadError('An error occurred while loading and validating records') from err
 
-
-    def _dataframe_with_dtypes(self, data):
-        """ converts records to column format
-        """
-        rutil = RecordUtils()
-        dfutil = DataFrameDtypeConversion()
-        col_data = rutil.records_to_columns(data)
-        dtype_map = self.serializer.get_numpy_fields()
-
-        # iterate columns and construct a dictionary of pd.Series with correct-dtype
-        df_data = {} # a dictionary of pd.Series with dtypes keyed by col names
-        for col, dtype in dtype_map.items():
-            df_data[col] = pd.Series(col_data[col], dtype=dtype)
-
-        df = pd.DataFrame(df_data)
-        df = dfutil.df_none_to_nan(df)
-        return df
 
 
     def to_dataframe(self):
@@ -283,7 +291,8 @@ class BaseCollection(AbstractCollection):
 
 class AbstractCollectionBuilder(abc.ABC):
     """ An interface for the CollectionBuilder. A build method takes a subclass of BaseSerializer
-    and creates a Collection class dynamically.
+    and creates a Collection class dynamically. Its use is optional but is designed to cut down on
+    class declarations if the user is making many generic Collection implementations.
     """
 
     @abc.abstractmethod

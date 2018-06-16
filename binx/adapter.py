@@ -1,60 +1,81 @@
 """ The adapter module helps the user mutate one collection into another. This works similar to
 a calc class in calc_factory.
-BaseAdapter's call takes a collection's data attribute as the first argument. An adapt() method is overridden
-by the user which must return a serializable object.
+AbstractAdapter's call takes a collection's data attribute as the first argument. An adapt() method must be
+overridden by the user which must return an instance of AdapterOutputContainer. This is enforced by returning the
+helper method
 
-Once the class is declared the user register's the adapter using the register static method.
+Once the class is declared the user register's the adapter using the register static method
 """
 import abc
-import json
-
-from .registry import get_class_from_collection_registry, register_adapter_to_collection, \
-    register_adaptable_collection
 
 
-def check_serializable(method):
-    """ this checks on the call method to make sure the result can be serialized
-    as a list of dicts
+
+def check_adapter_call(method):
+    """ a helper decorater for the __call__ method that does some type checking
     """
     def inner(*args, **kwargs):
+        self = args[0]
+        coll = args[1]
+        if not isinstance(coll, self.from_class):
+            raise TypeError('Cannot adapt from type {}'.format(coll))
+
         result = method(*args, **kwargs)
 
-        try:
-            assert type(result) == list
-            json.dumps(result)
-            return result
+        if not isinstance(result, AdapterOutputContainer):
+            raise TypeError('Adapters must return an instance of AdapterOutputContainer')
 
-        except (AssertionError, TypeError) as err:
-            raise err('adapt must return a JSON serializable object in record format (list of dicts)')
+    return inner
+
+
+class AdapterOutputContainer(object):
+    """ A generic container class for moving data out of adapters. It holds the target output
+    collection along with any context data that might need to be passed on to the caller or
+    another adapter. Essentially 'side effects' from the adaptation that might be needed further along
+    in the adapter chain
+
+    This is used internally in Adapter.__call__
+    """
+
+    def __init__(self, output_collection, **context):
+        self.output_collection = output_collection
+
+        for k,v in context.items():
+            setattr(self, k, v)
 
 
 
 class AbstractAdapter(abc.ABC):
+    """ Concrete Adapters subclass this class and override its adapt method with an implementation.
+    Other methods may be added as helper classes
+    """
+
+    target_collection_class = None
+    from_collection_class = None
+    is_registered = False #NOTE set to True in the adapter registery
+
+
+    def render_return(self, data, context={}):
+        """ A helper method renders the data response to the target_collection_class and passes context data.
+        Must return the data in an instance of AdapterOutputContainer
+        """
+        coll = self.target_collection_class()
+        coll.load_data(data)
+        return AdapterOutputContainer(coll, **context)
+
 
     @abc.abstractmethod
-    def adapt(self, data, *args, **kwargs):
+    def adapt(self, collection, **context):
         """ The user must overrides this method to do the data cleaning. Any additional methods
-        needed for cleaning should be considered private to the Adapter subclass
+        needed for clean should be considered private to the Adapter subclass. Must call render_return
         """
-
-    @check_serializable
-    def __call__(self, data, *args, **kwargs):
-        result = self.adapt(data, *args, **kwargs)
-        return result
+        return self.render_return(collection, **context) #NOTE this is an example of how to return from adapt
 
 
 
-def register_adapter(adapter_class, from_class, target_class):
-    """ Assigns the adapter class a target and from class. And registers the link in the
-    collection class registry.
-    """
-    adapter_class.target_class = target_class  # assign the class a from and target
-    adapter_class.from_class = from_class
-
-    target_lookup_path = target_class.get_fully_qualified_class_path()  # get some path names
-    from_lookup_path = from_class.get_fully_qualified_class_path()
-
-    # register adapter to the 'from' classes 'adapters' list and link the two classes on the 'target'
-    # in its 'adaptable_from' list
-    register_adapter_to_collection(from_class, adapter)
-    register_adaptable_collection(target_class, from_class)
+    @check_adapter_call
+    def __call__(self, collection, **context):
+        """ Wraps the adapt call and does some type checking. Makes sure that input collection
+        if the from_class and the output collection and context are delivered in an AdapterOutputContainer.
+        An adapter should be used as
+        """
+        return self.adapt(collection, **context)

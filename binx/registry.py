@@ -60,7 +60,7 @@ def _make_cc_graph():
         graph[entry[0]] = entry[1]['adaptable_from']
     return graph
 
-def bfs_shortest_path(graph, start, end):
+def _bfs_shortest_path(graph, start, end):
     """ a generic bfs search algo
     """
     def _bfs_paths(graph, start, end):
@@ -72,7 +72,21 @@ def bfs_shortest_path(graph, start, end):
                 if next_vertex == end:
                     yield path + [next_vertex]
                 else:
-                    queue.append((next_vertex, path + [next_vertex]))
+
+def register_adapter(adapter_class):
+    """ And registers the link in the collection class registry.
+    """
+    # adapter_class.target_collection_class = target_class  # assign the class a from and target
+    # adapter_class.from_collection_class = from_class
+
+    target_lookup_path = target_class.get_fully_qualified_class_path()  # get some path names
+    from_lookup_path = from_class.get_fully_qualified_class_path()
+
+    # register adapter to the 'from' classes 'adapters' list and link the two classes on the 'target'
+    # in its 'adaptable_from' list
+    register_adapter_to_collection(from_collection_class, adapter)
+    register_adaptable_collection(target_collection_class, from_class)
+            queue.append((next_vertex, path + [next_vertex]))
 
     try:
         return next(_bfs_paths(graph, start, end))
@@ -89,4 +103,20 @@ def adapter_path(from_class, end_class):
     current_graph = _make_cc_graph()
     shortest_path = bfs_shortest_path(current_graph, from_class, end_class)
 
-    
+
+def register_adapter(adapter_class):
+    """ This method must be called in order to register the adapter to its parent and target classes in the global
+    collection registry. It should be called on the Adapter class after it is declared in order. Note that an adapter does
+    not neccessarily need to be added to the adapter chain, but it is designed to help in developing larger data processing
+    projects that involve alot of related collections.  
+    """
+
+    target_lookup_path = target_class.get_fully_qualified_class_path()  # get some path names
+    from_lookup_path = from_class.get_fully_qualified_class_path()
+
+    # register adapter to the 'from' classes 'adapters' list and link the two classes on the 'target'
+    # in its 'adaptable_from' list
+    register_adapter_to_collection(from_collection_class, adapter)
+    register_adaptable_collection(target_collection_class, from_class)
+
+    adapter_class.is_registered = True #set this to true

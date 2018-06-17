@@ -36,12 +36,17 @@ class AdapterOutputContainer(object):
     This is used internally in Adapter.__call__
     """
 
-    def __init__(self, output_collection, **context):
-        self.output_collection = output_collection
+    def __init__(self, collection, **context):
+        self.collection = collection
+        self._context = {}
 
         for k,v in context.items():
-            setattr(self, k, v)
+            setattr(self, k, v)  # set on class and load into a context dict for easy access
+            self._context[k] = v # load in context
 
+    @property
+    def context(self):
+        return self._context
 
 
 class AbstractAdapter(abc.ABC):

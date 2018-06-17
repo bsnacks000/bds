@@ -72,6 +72,12 @@ def _bfs_shortest_path(graph, start, end):
                 if next_vertex == end:
                     yield path + [next_vertex]
                 else:
+                    queue.append((next_vertex, path + [next_vertex]))
+    try:
+        return next(_bfs_paths(graph, start, end))
+    except StopIteration:
+        return []
+
 
 def register_adapter(adapter_class):
     """ And registers the link in the collection class registry.
@@ -88,10 +94,7 @@ def register_adapter(adapter_class):
     register_adaptable_collection(target_collection_class, from_class)
             queue.append((next_vertex, path + [next_vertex]))
 
-    try:
-        return next(_bfs_paths(graph, start, end))
-    except StopIteration:
-        return []
+
 
 def adapter_path(from_class, end_class):
     """ traverses the registry and builds a class path of adapters to a target using
@@ -100,15 +103,29 @@ def adapter_path(from_class, end_class):
     are needed to adapt the schema. If no path is found it returns an empty list
     """
 
-    current_graph = _make_cc_graph()
-    shortest_path = bfs_shortest_path(current_graph, from_class, end_class)
+    current_graph = _make_cc_graph() # create snapshot of current path
+    colls = bfs_shortest_path(current_graph, from_class, end_class) # return adaptable collection path
+    if len(colls) == 0:
+        return colls  # empty list
 
+    # loop through list of classes going forward and find the appropriate adapter for the next coll class
+    # append these to a list and return
+    adapters = [None] * (len(colls) - 1)
+    for i in range(len(colls)):
+        target = colls[i+1]   # get refs
+        current = colls[i]
+        current_registry_entry = current.get_registry_entry() # return the complete registry entry
+        for adapter_class in current_registry_entry['registered_adapters']:
+            if adapter_class.target_collection_class is target:
+                adapters[0] = adapter_class
+
+    return adapters
 
 def register_adapter(adapter_class):
     """ This method must be called in order to register the adapter to its parent and target classes in the global
     collection registry. It should be called on the Adapter class after it is declared in order. Note that an adapter does
     not neccessarily need to be added to the adapter chain, but it is designed to help in developing larger data processing
-    projects that involve alot of related collections.  
+    projects that involve alot of related collections.
     """
 
     target_lookup_path = target_class.get_fully_qualified_class_path()  # get some path names

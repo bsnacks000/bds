@@ -1,7 +1,5 @@
 """ Abstract base classes for the system. The AHUOb
 """
-from __future__ import unicode_literals, absolute_import, division, print_function
-from builtins import *
 
 import abc
 import pandas as pd
@@ -10,7 +8,7 @@ from marshmallow import Schema, post_load, fields
 from marshmallow.exceptions import ValidationError
 
 from .exceptions import InternalNotDefinedError, CollectionLoadError
-from .registry import register_collection, get_class_from_collection_registry
+from .registry import register_collection, get_class_from_collection_registry, adapter_path
 from .utils import DataFrameDtypeConversion, RecordUtils
 
 import logging
@@ -164,7 +162,15 @@ class BaseCollection(AbstractCollection):
 
     @classmethod
     def get_fully_qualified_class_path(cls):
+        """ This returns the fully qualified class name for this class. This can be used for collection_registry lookup
+        """
         return cls.__module__ + '.' + cls.__name__
+
+    @classmethod
+    def get_registry_entry(cls):
+        """ This returns the complete registry entry for this class
+        """
+        return get_class_from_collection_registry(cls.get_fully_qualified_class_path())
 
 
     @property
@@ -213,16 +219,33 @@ class BaseCollection(AbstractCollection):
         if isinstance(other, self.__class__):
             combined = self.data + other.data
             new_inst = self.__class__()
-            new_inst._data = combined
+            new_inst.load_data(combined)
             return new_inst
         else:
             raise TypeError('Only Collections of the same class can be concatenated')
 
-    def _resolve_adapter(self, input_collection):
-        """ attempts to resolve the adapter chain
-        TODO: implement
-        """
 
+    def _resolve_adapter_chain(self, input_collection, **context):
+        """ attempts to resolve the adapter chain using the current class as the target and
+        input as the starting class.
+        returns the final AdapterOutputContainer with accumulated context
+        """
+        adapters = adapter_path(input_collection.__class__, self.__class__)
+        if len(adapters) == 0:  # return an empty list if no adapters can be found
+            return
+
+        current_context = context  # set starting point... these are instances and will be modified below
+        current_input = input_collection  # NOTE this is an instance with data to be transformed.. not a class
+        adapter_output = None
+
+        for adapter_class in adapters:
+            #NOTE custom error handling must be added here
+            current_adapter = adapter_class() # for each adapter class we push the input_collection and a context
+            adapter_output = current_adapter(current_input, **current_context) # adapt data to the next type of collection
+            current_context = {**current_context, **adapter_output.context} # NOTE this is will fail on py3.4
+            current_input = adapter_output.collection
+
+        return adapter_output
 
     def _dataframe_with_dtypes(self, data):
         """ converts records to column format
@@ -242,11 +265,17 @@ class BaseCollection(AbstractCollection):
         return df
 
 
-    def load_data(self, records):
+    def load_data(self, records, **adapter_context):
         """default implementation. Defaults to handling lists of python-dicts (records).
         #TODO -- create a drop_duplicates option and use pandas to drop the dupes
         """
         try:
+            if issubclass(records.__class__, self.__class__):
+                adapted = self._resolve_adapter_chain(records, **adapter_context)
+                #NOTE we probably need to raise here if we fail to return an adapter chain...
+                if adapted is not None:
+                    records = adapted.collection.data
+
             if isinstance(records, pd.DataFrame):
                 util = DataFrameDtypeConversion()
                 records = util.df_nan_to_none(records)

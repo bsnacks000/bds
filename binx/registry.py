@@ -4,17 +4,16 @@ are created by the user and registered at runtime.
 """
 
 from .exceptions import RegistryError
-
+from .utils import bfs_shortest_path
 
 _collection_registry = {}
 
+from pprint import pprint
 
 def register_collection(cls):
     """ registers a new collection class.
     """
-
-    modpath = cls.__module__  # build out the module path
-    fullpath = '.'.join([modpath, cls.__name__])
+    fullpath = cls.__module__ + '.' + cls.__name__
 
     if fullpath in _collection_registry: # if the fullpath is already
         raise RegistryError('The classname {} has already been registered. Create a different name for your collection'.format(fullpath))
@@ -26,6 +25,7 @@ def register_collection(cls):
         'registered_adapters': set(),  #NOTE these are the classes registered adapters
         'adaptable_from': set()   #NOTE these are other collection objects a coll can be adapted from
     })
+    #pprint(_collection_registry)
 
 
 def get_class_from_collection_registry(classname):
@@ -60,40 +60,6 @@ def _make_cc_graph():
         graph[entry[0]] = entry[1]['adaptable_from']
     return graph
 
-def _bfs_shortest_path(graph, start, end):
-    """ a generic bfs search algo
-    """
-    def _bfs_paths(graph, start, end):
-        # bfs using a generator. should return shortest path if any for an iteration
-        queue = [(start, [start])]
-        while queue:
-            (vertex, path) = queue.pop(0)
-            for next_vertex in graph[vertex] - set(path):
-                if next_vertex == end:
-                    yield path + [next_vertex]
-                else:
-                    queue.append((next_vertex, path + [next_vertex]))
-    try:
-        return next(_bfs_paths(graph, start, end))
-    except StopIteration:
-        return []
-
-
-def register_adapter(adapter_class):
-    """ And registers the link in the collection class registry.
-    """
-    # adapter_class.target_collection_class = target_class  # assign the class a from and target
-    # adapter_class.from_collection_class = from_class
-
-    target_lookup_path = target_class.get_fully_qualified_class_path()  # get some path names
-    from_lookup_path = from_class.get_fully_qualified_class_path()
-
-    # register adapter to the 'from' classes 'adapters' list and link the two classes on the 'target'
-    # in its 'adaptable_from' list
-    register_adapter_to_collection(from_collection_class, adapter)
-    register_adaptable_collection(target_collection_class, from_class)
-            queue.append((next_vertex, path + [next_vertex]))
-
 
 
 def adapter_path(from_class, end_class):
@@ -120,20 +86,3 @@ def adapter_path(from_class, end_class):
                 adapters[0] = adapter_class
 
     return adapters
-
-def register_adapter(adapter_class):
-    """ This method must be called in order to register the adapter to its parent and target classes in the global
-    collection registry. It should be called on the Adapter class after it is declared in order. Note that an adapter does
-    not neccessarily need to be added to the adapter chain, but it is designed to help in developing larger data processing
-    projects that involve alot of related collections.
-    """
-
-    target_lookup_path = target_class.get_fully_qualified_class_path()  # get some path names
-    from_lookup_path = from_class.get_fully_qualified_class_path()
-
-    # register adapter to the 'from' classes 'adapters' list and link the two classes on the 'target'
-    # in its 'adaptable_from' list
-    register_adapter_to_collection(from_collection_class, adapter)
-    register_adaptable_collection(target_collection_class, from_class)
-
-    adapter_class.is_registered = True #set this to true

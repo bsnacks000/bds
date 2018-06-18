@@ -1,6 +1,3 @@
-from __future__ import unicode_literals, absolute_import, division, print_function
-from builtins import *
-
 import unittest
 import os
 
@@ -198,6 +195,21 @@ class TestBaseCollection(unittest.TestCase):
 
         new_base = base + base2
 
+    def test_base_collection_concatenation_throws_TypeError_on_wrong_type(self):
+
+        base = BaseCollection()
+        base.load_data(self.data)
+
+        class DummyCollection(BaseCollection):
+            serializer_class = BaseSerializer
+            internal_class = InternalObject
+
+        d = DummyCollection()
+        d.load_data(self.data)
+
+        with self.assertRaises(TypeError):
+            new_base = d + base
+
 
     def test_base_collection_to_dataframe(self):
 
@@ -206,7 +218,7 @@ class TestBaseCollection(unittest.TestCase):
 
         test = base.to_dataframe()
 
-        assert_frame_equal(test, pd.DataFrame(self.data))
+        assert_frame_equal(test, pd.DataFrame().from_dict(self.data))
 
 
     def test_base_collection_dataframe_with_dtypes(self):
@@ -217,12 +229,16 @@ class TestBaseCollection(unittest.TestCase):
 
         df = base.to_dataframe()
         correct_dtypes = pd.Series([
-            np.dtype('int64'), np.dtype('object'), np.dtype('float64'),
-            np.dtype('datetime64[ns]'),np.dtype('datetime64[ns]'),np.dtype('bool'),
-            np.dtype('object')
-            ], index=['id', 'name', 'number', 'date', 'datet', 'tf', 'some_list'])
+            np.dtype('datetime64[ns]'),
+            np.dtype('datetime64[ns]'),
+            np.dtype('int64'),
+            np.dtype('object'),
+            np.dtype('float64'),
+            np.dtype('object'),
+            np.dtype('bool')
+            ], index=['date', 'datet', 'id', 'name', 'number', 'some_list', 'tf'])
 
-        assert_series_equal(df.dtypes, correct_dtypes)
+        assert_series_equal(df.dtypes, correct_dtypes, check_names=False)
 
         base2 = BaseCollection()
         base2.load_data(self.dtype_test_data_none)

@@ -7,7 +7,7 @@ helper method
 Once the class is declared the user register's the adapter using the register static method
 """
 import abc
-
+from .registry import register_adapter_to_collection, register_adaptable_collection
 
 
 def check_adapter_call(method):
@@ -16,7 +16,7 @@ def check_adapter_call(method):
     def inner(*args, **kwargs):
         self = args[0]
         coll = args[1]
-        if not isinstance(coll, self.from_class):
+        if not isinstance(coll, self.from_collection_class):
             raise TypeError('Cannot adapt from type {}'.format(coll))
 
         result = method(*args, **kwargs)
@@ -24,6 +24,7 @@ def check_adapter_call(method):
         if not isinstance(result, AdapterOutputContainer):
             raise TypeError('Adapters must return an instance of AdapterOutputContainer')
 
+        return result
     return inner
 
 
@@ -59,7 +60,7 @@ class AbstractAdapter(abc.ABC):
     is_registered = False #NOTE set to True in the adapter registery
 
 
-    def render_return(self, data, context={}):
+    def render_return(self, data, **context):
         """ A helper method renders the data response to the target_collection_class and passes context data.
         Must return the data in an instance of AdapterOutputContainer
         """
@@ -73,7 +74,7 @@ class AbstractAdapter(abc.ABC):
         """ The user must overrides this method to do the data cleaning. Any additional methods
         needed for clean should be considered private to the Adapter subclass. Must call render_return
         """
-        return self.render_return(collection, **context) #NOTE this is an example of how to return from adapt
+        #return self.render_return(collection, **context) #NOTE this is an example of how to return from adapt
 
 
 
@@ -84,3 +85,21 @@ class AbstractAdapter(abc.ABC):
         An adapter should be used as
         """
         return self.adapt(collection, **context)
+
+
+
+def register_adapter(adapter_class):
+    """ Registers the adapter class in the graph chain by setting its to and f
+    """
+    # adapter_class.target_collection_class = target_class  # assign the class a from and target
+    # adapter_class.from_collection_class = from_class
+
+    target_lookup_path = adapter_class.target_collection_class.get_fully_qualified_class_path()  # get some path names
+    from_lookup_path = adapter_class.from_collection_class.get_fully_qualified_class_path()
+
+    # register adapter to the 'from' classes 'adapters' list and link the two classes on the 'target'
+    # in its 'adaptable_from' list
+    register_adapter_to_collection(from_lookup_path, adapter_class)
+    register_adaptable_collection(target_lookup_path, adapter_class.from_collection_class)
+
+    adapter_class.is_registered = True

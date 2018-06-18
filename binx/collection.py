@@ -7,7 +7,7 @@ import numpy as np
 from marshmallow import Schema, post_load, fields
 from marshmallow.exceptions import ValidationError
 
-from .exceptions import InternalNotDefinedError, CollectionLoadError
+from .exceptions import InternalNotDefinedError, CollectionLoadError, CollectionValidationError
 from .registry import register_collection, get_class_from_collection_registry, adapter_path
 from .utils import DataFrameDtypeConversion, RecordUtils
 
@@ -355,8 +355,9 @@ class CollectionBuilder(AbstractCollectionBuilder):
         """ specifically makes collection classes by assigning the two necessary class attributes
         """
         class_attrs = {'serializer_class': serializer_class, 'internal_class': internal_class}
-        return type(name, (base_class, ), class_attrs)
-
+        x =  type(name, (base_class, ), class_attrs)
+        print(x)
+        return x
 
     def _parse_names(self, name):
         """ makes sure the user provided name is cleaned up

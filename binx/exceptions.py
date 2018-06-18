@@ -34,5 +34,5 @@ class CollectionValidationError(ValidationError, BinxError):
     """
 
 class AdapterCollectionResultError(BinxError):
-    """ thrown if a collection load fails while attempting to adapt 
+    """ thrown if a collection load fails while attempting to adapt
     """

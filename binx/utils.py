@@ -14,6 +14,27 @@ import logging
 l = logging.getLogger(__name__)
 
 
+
+def bfs_shortest_path(graph, start, end):
+    """ a generic bfs search algo
+    """
+    def _bfs_paths(graph, start, end):
+        # bfs using a generator. should return shortest path if any for an iteration
+        queue = [(start, [start])]
+        while queue:
+            (vertex, path) = queue.pop(0)
+            for next_vertex in graph[vertex] - set(path):
+                if next_vertex == end:
+                    yield path + [next_vertex]
+                else:
+                    queue.append((next_vertex, path + [next_vertex]))
+    try:
+        return next(_bfs_paths(graph, start, end))
+    except StopIteration:
+        return []
+
+
+
 class ObjUtils(object):
 
     def get_fully_qualified_path(self, obj):

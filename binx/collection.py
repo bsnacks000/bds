@@ -224,16 +224,16 @@ class BaseCollection(AbstractCollection):
         else:
             raise TypeError('Only Collections of the same class can be concatenated')
 
-
-    def _resolve_adapter_chain(self, input_collection, **adapter_context):
+    @classmethod
+    def _resolve_adapter_chain(cls, input_collection, **adapter_context):
         """ attempts to resolve the adapter chain using the current class as the target and
         input as the starting class. The adapter context accumulates over each call and ensures that
-        kwargs needed for certain adapter calls are guaranteed to make it to the correct adapter. 
+        kwargs needed for certain adapter calls are guaranteed to make it to the correct adapter.
 
         returns the final AdapterOutputContainer with accumulated context or None if there are no adapters in the adapter chain
         This raises an AdapterChainError in adapt
         """
-        adapters = adapter_path(input_collection.__class__, self.__class__)
+        adapters = adapter_path(input_collection.__class__, cls)
         if len(adapters) == 0:  # return an empty list if no adapters can be found
             return
 
@@ -296,22 +296,31 @@ class BaseCollection(AbstractCollection):
             l.error(err) #memoized property until it changes
             raise CollectionLoadError('An error occurred while loading and validating records') from err
 
+    @classmethod
+    def adapt(cls, input_collection, **adapter_context):
+        """ Attempts to adapt the input collection instance into a collection of this type by
+        resolving the adapter chain for the input collection. Any kwargs passed in are handed over to the resolver.
+        colla = CollectionA()
+        colla.load_data(some_data)
+        collb, context = CollectionB.adapt(colla, some_var=42, some_other_var=66)
 
-    def adapt(self, input_collection, **adapter_context):
-        """ Attempts to adapt the
+
+        This method returns a new instance of the adapted class (the caller)
         """
-
-        if issubclass(input_collection.__class__, self.__class__): #check if its a collection
-            adapted = self._resolve_adapter_chain(input_collection, **adapter_context)
-            #NOTE we probably need to raise here if we fail to return an adapter chain...
-            if adapted is not None:
-                records = adapted.collection.data
-                self.load_data(records)
-            else:
-                raise AdapterChainError('The input_collection {} could not be found on the adapter chain for {}'.format(
-                    input_collection.__class__.__name__, self.__class__.__name__))
-        else:
+        if not issubclass(input_collection.__class__, BaseCollection): #check if its a Collection or raise TypeError
             raise TypeError('The input to adapt must be a Collection')
+        try:
+            adapted = cls._resolve_adapter_chain(input_collection, **adapter_context) # attempt to resolve the adapter chain
+        except Exception as err:
+            raise AdapterChainError('An error occured within the adapter chain') from err
+
+        if adapted is not None:
+            return adapted.collection, adapted.context # on success we return the new collection and the accumulated context for reference
+        else:
+            raise AdapterChainError('The input_collection {} could not be found on the adapter chain for {}'.format(
+                input_collection.__class__.__name__, cls.__name__))
+
+
 
     def to_dataframe(self):
         """ returns a dataframe representation of the object. This wraps the data property in a

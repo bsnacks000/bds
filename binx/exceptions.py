@@ -36,3 +36,7 @@ class CollectionValidationError(ValidationError, BinxError):
 class AdapterCollectionResultError(BinxError):
     """ thrown if a collection load fails while attempting to adapt
     """
+
+class AdapterChainError(BinxError):
+    """ thrown if a input collection cannot be found on the adapter chain for a Collection
+    """

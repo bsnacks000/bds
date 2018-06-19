@@ -225,16 +225,19 @@ class BaseCollection(AbstractCollection):
             raise TypeError('Only Collections of the same class can be concatenated')
 
 
-    def _resolve_adapter_chain(self, input_collection, **context):
+    def _resolve_adapter_chain(self, input_collection, **adapter_context):
         """ attempts to resolve the adapter chain using the current class as the target and
-        input as the starting class.
-        returns the final AdapterOutputContainer with accumulated context
+        input as the starting class. The adapter context accumulates over each call and ensures that
+        kwargs needed for certain adapter calls are guaranteed to make it to the correct adapter. 
+
+        returns the final AdapterOutputContainer with accumulated context or None if there are no adapters in the adapter chain
+        This raises an AdapterChainError in adapt
         """
         adapters = adapter_path(input_collection.__class__, self.__class__)
         if len(adapters) == 0:  # return an empty list if no adapters can be found
             return
 
-        current_context = context  # set starting point... these are instances and will be modified below
+        current_context = adpater_context  # set starting point... these are instances and will be modified below
         current_input = input_collection  # NOTE this is an instance with data to be transformed.. not a class
         adapter_output = None
 
@@ -265,17 +268,11 @@ class BaseCollection(AbstractCollection):
         return df
 
 
-    def load_data(self, records, **adapter_context):
+    def load_data(self, records):
         """default implementation. Defaults to handling lists of python-dicts (records).
         #TODO -- create a drop_duplicates option and use pandas to drop the dupes
         """
         try:
-            if issubclass(records.__class__, self.__class__):
-                adapted = self._resolve_adapter_chain(records, **adapter_context)
-                #NOTE we probably need to raise here if we fail to return an adapter chain...
-                if adapted is not None:
-                    records = adapted.collection.data
-
             if isinstance(records, pd.DataFrame):
                 util = DataFrameDtypeConversion()
                 records = util.df_nan_to_none(records)
@@ -300,6 +297,21 @@ class BaseCollection(AbstractCollection):
             raise CollectionLoadError('An error occurred while loading and validating records') from err
 
 
+    def adapt(self, input_collection, **adapter_context):
+        """ Attempts to adapt the
+        """
+
+        if issubclass(input_collection.__class__, self.__class__): #check if its a collection
+            adapted = self._resolve_adapter_chain(input_collection, **adapter_context)
+            #NOTE we probably need to raise here if we fail to return an adapter chain...
+            if adapted is not None:
+                records = adapted.collection.data
+                self.load_data(records)
+            else:
+                raise AdapterChainError('The input_collection {} could not be found on the adapter chain for {}'.format(
+                    input_collection.__class__.__name__, self.__class__.__name__))
+        else:
+            raise TypeError('The input to adapt must be a Collection')
 
     def to_dataframe(self):
         """ returns a dataframe representation of the object. This wraps the data property in a

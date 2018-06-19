@@ -89,7 +89,7 @@ class AbstractAdapter(abc.ABC):
 
 
 def register_adapter(adapter_class):
-    """ Registers the adapter class in the graph chain by setting its to and f
+    """ Registers the adapter class in the graph chain by setting its to and from classes
     """
     # adapter_class.target_collection_class = target_class  # assign the class a from and target
     # adapter_class.from_collection_class = from_class

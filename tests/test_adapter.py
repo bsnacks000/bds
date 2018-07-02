@@ -8,6 +8,11 @@ from binx.collection import BaseCollection, BaseSerializer, CollectionBuilder
 from binx.adapter import AdapterOutputContainer, AbstractAdapter, register_adapter
 from marshmallow import fields
 
+from binx.registry import _make_cc_graph, adapter_path
+from binx.utils import bfs_shortest_path
+
+from pprint import pprint
+
 class TestASerializer(BaseSerializer):
     a = fields.Integer()
 
@@ -147,34 +152,35 @@ class TestAdapterCollectionIntegration(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        # These test the creation of the adapter chain 
 
-        builder = CollectionBuilder('TestA')
-        cls.TestACollection = builder.build(TestASerializer)
+        builder = CollectionBuilder('TestAA') 
+        cls.TestAACollection = builder.build(TestASerializer)
 
-        builder.name = 'TestB'
-        cls.TestBCollection = builder.build(TestBSerializer)
+        builder.name = 'TestBB'
+        cls.TestBBCollection = builder.build(TestBSerializer)
 
-        builder.name = 'TestC'
-        cls.TestCCollection = builder.build(TestCSerializer)
+        builder.name = 'TestCC'
+        cls.TestCCCollection = builder.build(TestCSerializer)
 
         class SimpleAToBAdapter(AbstractAdapter):
-            from_collection_class = cls.TestACollection
-            target_collection_class = cls.TestBCollection
+            from_collection_class = cls.TestAACollection
+            target_collection_class = cls.TestBBCollection
 
             def adapt(self, collection, **context):
                 df = collection.to_dataframe()
-                df['b'] = 42  # add a column with some dataframe here
+                df['b'] = 42  # add a column b with some dataframe here
 
                 return self.render_return(df, context_var='hep', other_context_var='tup')
 
 
         class SimpleBToCAdapter(AbstractAdapter):
-            from_collection_class = cls.TestACollection
-            target_collection_class = cls.TestBCollection
+            from_collection_class = cls.TestBBCollection
+            target_collection_class = cls.TestCCCollection
 
             def adapt(self, collection, **context):
                 df = collection.to_dataframe()
-                df['b'] = 42  # add a column with some dataframe here
+                df['c'] = 43  # add a column c with some dataframe here
 
                 return self.render_return(df, something_else='mups', some_thing='zups')
 
@@ -187,13 +193,29 @@ class TestAdapterCollectionIntegration(unittest.TestCase):
 
     def setUp(self):
         self.SimpleAToBAdapter = self.__class__.SimpleAToBAdapter
-        self.TestBCollection = self.__class__.TestBCollection
-        self.TestACollection = self.__class__.TestACollection
-        self.TestCCollection = self.__class__.TestCCollection
+        self.TestBBCollection = self.__class__.TestBBCollection
+        self.TestAACollection = self.__class__.TestAACollection
+        self.TestCCCollection = self.__class__.TestCCCollection
 
 
     def tearDown(self):
         self.SimpleAToBAdapter = None
-        self.TestBCollection = None
-        self.TestACollection = None
-        self.TestCCollection = None
+        self.TestBBCollection = None
+        self.TestAACollection = None
+        self.TestCCCollection = None
+
+    
+    def test_integration_c_adapts_a(self):
+        # tests that given the above setup, an instance of TestCCollection will be made 
+        # from an instance of TestACollection 
+
+        test_a_coll = self.TestAACollection()
+        test_a_coll.load_data([{'a': 41}])
+        
+        test_c_coll, context = self.TestCCCollection.adapt(test_a_coll, foo='bar')
+        #print(test_c_coll.data, context)
+        test_data = [{'c': 43, 'b': 42, 'a': 41}]
+        test_context = {'foo': 'bar', 'something_else': 'mups', 'other_context_var': 'tup', 'context_var': 'hep', 'some_thing': 'zups'}
+
+        self.assertEqual(test_data, test_c_coll.data)
+        self.assertEqual(test_context, context)

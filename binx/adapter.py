@@ -74,6 +74,9 @@ class AbstractAdapter(abc.ABC):
         """ The user must overrides this method to do the data cleaning. Any additional methods
         needed for clean should be considered private to the Adapter subclass. Must call render_return
         """
+        # get the data from the input_collection  (collection.data or collection.to_dataframe() or whatever...)
+        # get the context args you need... context.pop('some-key') or context['some-key']
+        
         #return self.render_return(collection, **context) #NOTE this is an example of how to return from adapt
 
 

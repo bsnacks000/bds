@@ -55,9 +55,18 @@ def _make_cc_graph():
     using the 'adaptable_from' sets for each graph. This is used by adapter path to return a
     path of classes connecting two nodes
     """
+
     graph = {}
+    #graph = {v[0]:[] for k,v in _collection_registry.items()}
     for name, entry in _collection_registry.items():
-        graph[entry[0]] = entry[1]['adaptable_from']
+        graph[entry[0]] = set()
+        targets = set([e.target_collection_class for e in entry[1]['registered_adapters']])
+
+        graph[entry[0]].update(entry[1]['adaptable_from'])
+        graph[entry[0]].update(targets)
+        #graph[entry].add(entry[1]['adaptable_from'])
+    graph = {k:v for k,v in graph.items()if len(v) > 0}
+
     return graph
 
 
@@ -70,6 +79,8 @@ def adapter_path(from_class, end_class):
     """
 
     current_graph = _make_cc_graph() # create snapshot of current path
+    if len(current_graph) == 0:
+        return []
     colls = bfs_shortest_path(current_graph, from_class, end_class) # return adaptable collection path
     if len(colls) == 0:
         return colls  # empty list
@@ -77,12 +88,13 @@ def adapter_path(from_class, end_class):
     # loop through list of classes going forward and find the appropriate adapter for the next coll class
     # append these to a list and return
     adapters = [None] * (len(colls) - 1)
-    for i in range(len(colls)):
-        target = colls[i+1]   # get refs
-        current = colls[i]
+    for i in range(1, len(colls)):
+        target = colls[i]   # get refs
+        current = colls[i-1]
         current_registry_entry = current.get_registry_entry() # return the complete registry entry
-        for adapter_class in current_registry_entry['registered_adapters']:
+        for adapter_class in current_registry_entry[1]['registered_adapters']:
             if adapter_class.target_collection_class is target:
-                adapters[0] = adapter_class
+                adapters[i-1] = adapter_class
+
 
     return adapters

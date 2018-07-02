@@ -7,7 +7,7 @@ import numpy as np
 from marshmallow import Schema, post_load, fields
 from marshmallow.exceptions import ValidationError
 
-from .exceptions import InternalNotDefinedError, CollectionLoadError, CollectionValidationError
+from .exceptions import InternalNotDefinedError, CollectionLoadError, CollectionValidationError, AdapterChainError
 from .registry import register_collection, get_class_from_collection_registry, adapter_path
 from .utils import DataFrameDtypeConversion, RecordUtils
 
@@ -37,6 +37,7 @@ class BaseSerializer(Schema):
     It also provides a mapping of numpy dtypes to a select amount of marshmallow field name which helps optimize
     memory in the to_dataframe object
     """
+    
     registered_colls = set()
 
     numpy_map = {
@@ -155,6 +156,7 @@ class BaseCollection(AbstractCollection):
         inst = super(BaseCollection, cls).__new__(cls, *args, **kwargs)
         return inst
 
+
     def __init__(self):
         self._data = []
         self._serializer = self.serializer_class(internal=self.__class__.internal_class, strict=True)
@@ -237,7 +239,7 @@ class BaseCollection(AbstractCollection):
         if len(adapters) == 0:  # return an empty list if no adapters can be found
             return
 
-        current_context = adpater_context  # set starting point... these are instances and will be modified below
+        current_context = adapter_context  # set starting point... these are instances and will be modified below
         current_input = input_collection  # NOTE this is an instance with data to be transformed.. not a class
         adapter_output = None
 
@@ -246,8 +248,10 @@ class BaseCollection(AbstractCollection):
             current_adapter = adapter_class() # for each adapter class we push the input_collection and a context
             adapter_output = current_adapter(current_input, **current_context) # adapt data to the next type of collection
             current_context = {**current_context, **adapter_output.context} # NOTE this is will fail on py3.4
+            #print('current_context', current_context)
             current_input = adapter_output.collection
 
+        adapter_output._context = current_context
         return adapter_output
 
     def _dataframe_with_dtypes(self, data):

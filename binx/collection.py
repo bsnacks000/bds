@@ -160,6 +160,12 @@ class BaseCollection(AbstractCollection):
     def __init__(self):
         self._data = []
         self._serializer = self.serializer_class(internal=self.__class__.internal_class, strict=True)
+        self._return_self()
+
+    def _return_self(self):
+        """ allows chaining instantiation with load 
+        """
+        return self
 
 
     @classmethod

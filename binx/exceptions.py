@@ -1,5 +1,6 @@
 """ Custom exceptions for binx
 """
+from marshmallow.exceptions import ValidationError
 
 class BinxError(Exception):
     """ A base exception for the library
@@ -23,6 +24,19 @@ class FactoryCreateValidationError(BinxError):
 
 
 
-class RegistryError(BinxError):
+class RegistryError(BinxError, KeyError):
     """ raised if a classname already exists in the collection registry
+    """
+
+
+class CollectionValidationError(ValidationError, BinxError):
+    """ subclass of a marshmallow validation error
+    """
+
+class AdapterCollectionResultError(BinxError):
+    """ thrown if a collection load fails while attempting to adapt
+    """
+
+class AdapterChainError(BinxError):
+    """ thrown if a input collection cannot be found on the adapter chain for a Collection
     """

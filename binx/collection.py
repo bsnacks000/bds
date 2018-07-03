@@ -1,7 +1,5 @@
 """ Abstract base classes for the system. The AHUOb
 """
-from __future__ import unicode_literals, absolute_import, division, print_function
-from builtins import *
 
 import abc
 import pandas as pd
@@ -9,12 +7,14 @@ import numpy as np
 from marshmallow import Schema, post_load, fields
 from marshmallow.exceptions import ValidationError
 
-from .exceptions import InternalNotDefinedError, CollectionLoadError
-from .registry import register_collection
+from .exceptions import InternalNotDefinedError, CollectionLoadError, CollectionValidationError, AdapterChainError
+from .registry import register_collection, get_class_from_collection_registry, adapter_path
 from .utils import DataFrameDtypeConversion, RecordUtils
 
 import logging
 l = logging.getLogger(__name__)
+
+
 
 # a place for the registry of internals after they are constructed
 
@@ -37,6 +37,7 @@ class BaseSerializer(Schema):
     It also provides a mapping of numpy dtypes to a select amount of marshmallow field name which helps optimize
     memory in the to_dataframe object
     """
+    
     registered_colls = set()
 
     numpy_map = {
@@ -98,6 +99,11 @@ class AbstractCollection(object, metaclass=AbstractCollectionMeta):
     a metaclass
     """
 
+    @abc.abstractmethod
+    def get_fully_qualified_class_path(self):
+        """ reaches into the registry and gets the fully qualified class path"""
+
+
     @property
     @abc.abstractmethod
     def serializer_class(self):
@@ -150,9 +156,29 @@ class BaseCollection(AbstractCollection):
         inst = super(BaseCollection, cls).__new__(cls, *args, **kwargs)
         return inst
 
+
     def __init__(self):
         self._data = []
         self._serializer = self.serializer_class(internal=self.__class__.internal_class, strict=True)
+        self._return_self()
+
+    def _return_self(self):
+        """ allows chaining instantiation with load 
+        """
+        return self
+
+
+    @classmethod
+    def get_fully_qualified_class_path(cls):
+        """ This returns the fully qualified class name for this class. This can be used for collection_registry lookup
+        """
+        return cls.__module__ + '.' + cls.__name__
+
+    @classmethod
+    def get_registry_entry(cls):
+        """ This returns the complete registry entry for this class
+        """
+        return get_class_from_collection_registry(cls.get_fully_qualified_class_path())
 
 
     @property
@@ -201,14 +227,59 @@ class BaseCollection(AbstractCollection):
         if isinstance(other, self.__class__):
             combined = self.data + other.data
             new_inst = self.__class__()
-            new_inst._data = combined
+            new_inst.load_data(combined)
             return new_inst
         else:
             raise TypeError('Only Collections of the same class can be concatenated')
 
+    @classmethod
+    def _resolve_adapter_chain(cls, input_collection, **adapter_context):
+        """ attempts to resolve the adapter chain using the current class as the target and
+        input as the starting class. The adapter context accumulates over each call and ensures that
+        kwargs needed for certain adapter calls are guaranteed to make it to the correct adapter.
+
+        returns the final AdapterOutputContainer with accumulated context or None if there are no adapters in the adapter chain
+        This raises an AdapterChainError in adapt
+        """
+        adapters = adapter_path(input_collection.__class__, cls)
+        if len(adapters) == 0:  # return an empty list if no adapters can be found
+            return
+
+        current_context = adapter_context  # set starting point... these are instances and will be modified below
+        current_input = input_collection  # NOTE this is an instance with data to be transformed.. not a class
+        adapter_output = None
+
+        for adapter_class in adapters:
+            #NOTE custom error handling must be added here
+            current_adapter = adapter_class() # for each adapter class we push the input_collection and a context
+            adapter_output = current_adapter(current_input, **current_context) # adapt data to the next type of collection
+            current_context = {**current_context, **adapter_output.context} # NOTE this is will fail on py3.4
+            #print('current_context', current_context)
+            current_input = adapter_output.collection
+
+        adapter_output._context = current_context
+        return adapter_output
+
+    def _dataframe_with_dtypes(self, data):
+        """ converts records to column format
+        """
+        rutil = RecordUtils()
+        dfutil = DataFrameDtypeConversion()
+        col_data = rutil.records_to_columns(data)
+        dtype_map = self.serializer.get_numpy_fields()
+
+        # iterate columns and construct a dictionary of pd.Series with correct-dtype
+        df_data = {} # a dictionary of pd.Series with dtypes keyed by col names
+        for col, dtype in dtype_map.items():
+            df_data[col] = pd.Series(col_data[col], dtype=dtype)
+
+        df = pd.DataFrame(df_data)
+        df = dfutil.df_none_to_nan(df)
+        return df
+
+
     def load_data(self, records):
-        """default implementation. Defaults to handling lists of python-dicts (records). from_df=True will allow
-        direct from dataframe serialization as a convenience
+        """default implementation. Defaults to handling lists of python-dicts (records).
         #TODO -- create a drop_duplicates option and use pandas to drop the dupes
         """
         try:
@@ -229,29 +300,36 @@ class BaseCollection(AbstractCollection):
         except ValidationError as err:
             errors = err.messages
             l.error(errors)
-            raise
+            raise CollectionValidationError('A ValidationError occurred while trying to load {}'.format(self.__class__.__name__)) from err
 
         except Exception as err:
             l.error(err) #memoized property until it changes
             raise CollectionLoadError('An error occurred while loading and validating records') from err
 
+    @classmethod
+    def adapt(cls, input_collection, **adapter_context):
+        """ Attempts to adapt the input collection instance into a collection of this type by
+        resolving the adapter chain for the input collection. Any kwargs passed in are handed over to the resolver.
+        colla = CollectionA()
+        colla.load_data(some_data)
+        collb, context = CollectionB.adapt(colla, some_var=42, some_other_var=66)
 
-    def _dataframe_with_dtypes(self, data):
-        """ converts records to column format
+
+        This method returns a new instance of the adapted class (the caller)
         """
-        rutil = RecordUtils()
-        dfutil = DataFrameDtypeConversion()
-        col_data = rutil.records_to_columns(data)
-        dtype_map = self.serializer.get_numpy_fields()
+        if not issubclass(input_collection.__class__, BaseCollection): #check if its a Collection or raise TypeError
+            raise TypeError('The input to adapt must be a Collection')
+        try:
+            adapted = cls._resolve_adapter_chain(input_collection, **adapter_context) # attempt to resolve the adapter chain
+        except Exception as err:
+            raise AdapterChainError('An error occured within the adapter chain') from err
 
-        # iterate columns and construct a dictionary of pd.Series with correct-dtype
-        df_data = {} # a dictionary of pd.Series with dtypes keyed by col names
-        for col, dtype in dtype_map.items():
-            df_data[col] = pd.Series(col_data[col], dtype=dtype)
+        if adapted is not None:
+            return adapted.collection, adapted.context # on success we return the new collection and the accumulated context for reference
+        else:
+            raise AdapterChainError('The input_collection {} could not be found on the adapter chain for {}'.format(
+                input_collection.__class__.__name__, cls.__name__))
 
-        df = pd.DataFrame(df_data)
-        df = dfutil.df_none_to_nan(df)
-        return df
 
 
     def to_dataframe(self):
@@ -273,7 +351,8 @@ class BaseCollection(AbstractCollection):
 
 class AbstractCollectionBuilder(abc.ABC):
     """ An interface for the CollectionBuilder. A build method takes a subclass of BaseSerializer
-    and creates a Collection class dynamically.
+    and creates a Collection class dynamically. Its use is optional but is designed to cut down on
+    class declarations if the user is making many generic Collection implementations.
     """
 
     @abc.abstractmethod
@@ -307,8 +386,9 @@ class CollectionBuilder(AbstractCollectionBuilder):
         """ specifically makes collection classes by assigning the two necessary class attributes
         """
         class_attrs = {'serializer_class': serializer_class, 'internal_class': internal_class}
-        return type(name, (base_class, ), class_attrs)
-
+        x =  type(name, (base_class, ), class_attrs)
+        print(x)
+        return x
 
     def _parse_names(self, name):
         """ makes sure the user provided name is cleaned up
@@ -337,7 +417,10 @@ class CollectionBuilder(AbstractCollectionBuilder):
 
     def build(self, serializer_class, internal_only=False):
         """ dynamically creates and returns a Collection class given a serializer
-        and identifier.
+        and identifier. If internal_only is set to True then this will only return the internal.
+        This is useful if you are using a declarative approach to defining the collections and want to
+        add or override some of the base behavior
+
         """
 
         coll_name, internal_name = self._parse_names(self.name) # create the col name

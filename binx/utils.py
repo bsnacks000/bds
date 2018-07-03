@@ -1,5 +1,4 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-from builtins import *
+
 
 """ general purpose functionality. Classes are loosely classified by method type
 """
@@ -12,6 +11,39 @@ import numpy as np
 
 import logging
 l = logging.getLogger(__name__)
+
+from pprint import pprint 
+
+def bfs_shortest_path(graph, start, end):
+    """ a generic bfs search algo
+    """
+    def _bfs_paths(graph, start, end):
+        # bfs using a generator. should return shortest path if any for an iteration
+        #pprint('inside bfs: ' +  str(graph))
+        queue = [(start, [start])]
+        #pprint('queue: ' + str(queue))
+        while queue:
+            (vertex, path) = queue.pop(0)
+            for next_vertex in graph[vertex] - set(path):
+                if next_vertex == end:
+                    yield path + [next_vertex]
+                else:
+                    queue.append((next_vertex, path + [next_vertex]))
+    try:
+        return next(_bfs_paths(graph, start, end))
+    except StopIteration:
+        return []
+
+
+class ObjUtils(object):
+
+    def get_fully_qualified_path(self, obj):
+        """returns the fully qualified path of the class that defines this instance"""
+        module = obj.__class__.__module__ # use the path name of the internal object on setUp
+        clsname = obj.__class__.__name__
+        full = '.'.join([module,clsname])
+        return full
+
 
 
 class RecordUtils(object):
@@ -27,6 +59,19 @@ class RecordUtils(object):
                 if v is np.nan:
                     record[k] = None
         return records
+
+
+    def records_to_columns(self, records):
+        """ convert record format to column format
+        """
+        return {k: [d[k] for d in records] for k in records[0]}
+
+
+    def columns_to_records(self, column_dict):
+        """ convert column_dict format to record format
+        """
+        return [dict(zip(column_dict, d)) for d in zip(*column_dict.values())]
+
 
 
 

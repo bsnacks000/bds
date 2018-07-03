@@ -1,6 +1,3 @@
-from __future__ import unicode_literals, absolute_import, division, print_function
-from builtins import *
-
 import unittest
 import os
 
@@ -8,7 +5,8 @@ from binx.collection import InternalObject, BaseSerializer, BaseCollection
 from binx.exceptions import InternalNotDefinedError, CollectionLoadError
 
 import pandas as pd
-from pandas.testing import assert_frame_equal
+import numpy as np
+from pandas.testing import assert_frame_equal, assert_series_equal
 from marshmallow import fields
 from marshmallow.exceptions import ValidationError
 
@@ -19,6 +17,16 @@ class InternalSerializer(BaseSerializer):
     #NOTE used in the test below
     bdbid = fields.Integer()
     name = fields.Str()
+
+class InternalDtypeTestSerializer(BaseSerializer):
+    # tests that dtypes are being interpretted correctly in collection.to_dataframe
+    id = fields.Integer(allow_none=True)
+    name = fields.Str(allow_none=True)
+    number = fields.Float(allow_none=True)
+    date = fields.Date('%Y-%m-%d', allow_none=True)
+    datet = fields.DateTime('%Y-%m-%d %H:%M:%S', allow_none=True)
+    tf = fields.Bool(allow_none=True)
+    some_list = fields.List(fields.Integer, allow_none=True)
 
 
 class TestInternalObject(unittest.TestCase):
@@ -60,7 +68,15 @@ class TestBaseSerializer(unittest.TestCase):
         for i in obj:
             self.assertIsInstance(i, InternalObject)
 
+    def test_serializer_get_numpy_dtypes(self):
 
+        s = InternalSerializer(internal=InternalObject, strict=True)
+        data = [{'bdbid': 1, 'name': 'hi-there'}, {'bdbid': 2, 'name': 'hi-ho'}]
+        obj, _ = s.load(data, many=True)
+
+        out = s.get_numpy_fields()
+        self.assertEqual(out['bdbid'], np.dtype('int64'))
+        self.assertEqual(out['name'], np.dtype('<U'))
 
 class TestBaseCollection(unittest.TestCase):
 
@@ -94,6 +110,19 @@ class TestBaseCollection(unittest.TestCase):
             {'bdbid': 'hep', 'name': 'hi-there'},
             {'bdbid': 2, 'name': 'hi-ho'},
             {'bdbid': 3, 'name': 'whoop'},
+        ]
+
+        self.dtype_test_data = [
+            {'id': 1, 'name': 'hep', 'number': 42.666, 'date': '2017-05-04', 'datet': '2017-05-04 10:30:24', 'tf':True, 'some_list':[1,2,3]},
+            {'id': 2, 'name': 'xup', 'number': 41.666, 'date': '2016-05-04', 'datet': '2016-05-04 10:30:24', 'tf':False, 'some_list':[4,5,6]},
+            {'id': 3, 'name': 'pup', 'number': 40.666, 'date': '2015-05-04', 'datet': '2015-05-04 10:30:24', 'tf':True, 'some_list':[7,8,9]},
+        ]
+
+        self.dtype_test_data_none = [
+            {'id': 1, 'name': 'hep', 'number': 42.666, 'date': '2017-05-04', 'datet': '2017-05-04 10:30:24', 'tf':True, 'some_list':None},
+            {'id': 2, 'name': None, 'number': 41.666, 'date': '2016-05-04', 'datet': None, 'tf':False, 'some_list':[4,5,6]},
+            {'id': 3, 'name': 'pup', 'number': None, 'date': '2015-05-04', 'datet': '2015-05-04 10:30:24', 'tf':True, 'some_list':[7,8,9]},
+
         ]
 
 
@@ -133,11 +162,10 @@ class TestBaseCollection(unittest.TestCase):
         df = pd.DataFrame(self.data)
         base = BaseCollection()
 
-        base.load_data(df, from_df=True)
+        base.load_data(df)
 
         for i in base._data:
             self.assertIsInstance(i, InternalObject)
-
 
 
     def test_base_collection_is_iterable(self):
@@ -167,6 +195,22 @@ class TestBaseCollection(unittest.TestCase):
 
         new_base = base + base2
 
+    def test_base_collection_concatenation_throws_TypeError_on_wrong_type(self):
+
+        base = BaseCollection()
+        base.load_data(self.data)
+
+        class DummyCollection(BaseCollection):
+            serializer_class = BaseSerializer
+            internal_class = InternalObject
+
+        d = DummyCollection()
+        d.load_data(self.data)
+
+        with self.assertRaises(TypeError):
+            new_base = d + base
+
+
     def test_base_collection_to_dataframe(self):
 
         base = BaseCollection()
@@ -174,4 +218,43 @@ class TestBaseCollection(unittest.TestCase):
 
         test = base.to_dataframe()
 
-        assert_frame_equal(test, pd.DataFrame(self.data))
+        assert_frame_equal(test, pd.DataFrame().from_dict(self.data))
+
+
+    def test_base_collection_dataframe_with_dtypes(self):
+
+        BaseCollection.serializer_class = InternalDtypeTestSerializer # NOTE patching a different serializer here
+        base = BaseCollection()
+        base.load_data(self.dtype_test_data)
+
+        df = base.to_dataframe()
+        correct_dtypes = pd.Series([
+            np.dtype('datetime64[ns]'),
+            np.dtype('datetime64[ns]'),
+            np.dtype('int64'),
+            np.dtype('object'),
+            np.dtype('float64'),
+            np.dtype('object'),
+            np.dtype('bool')
+            ], index=['date', 'datet', 'id', 'name', 'number', 'some_list', 'tf'])
+
+        assert_series_equal(df.dtypes, correct_dtypes, check_names=False)
+
+        base2 = BaseCollection()
+        base2.load_data(self.dtype_test_data_none)
+        df = base2.to_dataframe()
+
+        self.assertTrue(df.isnull().values.any())
+
+        BaseCollection.serializer_class = InternalSerializer #NOTE must patch this back here
+
+
+    def test_new_collection_instances_register_on_serializer_and_internal(self):
+
+        base = BaseCollection()
+
+        test = BaseCollection in base.serializer.registered_colls
+        self.assertTrue(test)
+
+        BaseCollection in base.internal.registered_colls
+        self.assertTrue(test)

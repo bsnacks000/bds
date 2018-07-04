@@ -78,6 +78,11 @@ class TestBaseSerializer(unittest.TestCase):
         self.assertEqual(out['bdbid'], np.dtype('int64'))
         self.assertEqual(out['name'], np.dtype('<U'))
 
+
+    def test_serializer_dateformat_fields(self):
+        self.fail('TODO')
+
+
 class TestBaseCollection(unittest.TestCase):
 
     @classmethod
@@ -228,19 +233,6 @@ class TestBaseCollection(unittest.TestCase):
         base = BaseCollection()
         base.load_data(self.dtype_test_data)
 
-        # df = base.to_dataframe()
-        # correct_dtypes = pd.Series([
-        #     np.dtype('int64'),
-        #     np.dtype('object'),
-        #     np.dtype('float64'),
-        #     np.dtype('datetime64[ns]'),
-        #     np.dtype('datetime64[ns]'),
-        #     np.dtype('bool'),
-        #     np.dtype('object')
-        #     ], index=['id', 'name', 'number', 'date', 'datet', 'tf', 'some_list'])
-            
-        # assert_series_equal(df.dtypes, correct_dtypes, check_names=False)
-
         base2 = BaseCollection()
         base2.load_data(self.dtype_test_data_none)
         df = base2.to_dataframe()
@@ -259,3 +251,7 @@ class TestBaseCollection(unittest.TestCase):
 
         BaseCollection in base.internal.registered_colls
         self.assertTrue(test)
+
+
+    def test_datetime_and_date_objects_get_correctly_parsed_by_load_data(self):
+        self.fail('TODO')

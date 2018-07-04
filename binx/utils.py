@@ -12,16 +12,16 @@ import numpy as np
 import logging
 l = logging.getLogger(__name__)
 
-from pprint import pprint 
+from pprint import pprint
+import datetime
 
 def bfs_shortest_path(graph, start, end):
     """ a generic bfs search algo
     """
     def _bfs_paths(graph, start, end):
         # bfs using a generator. should return shortest path if any for an iteration
-        #pprint('inside bfs: ' +  str(graph))
+
         queue = [(start, [start])]
-        #pprint('queue: ' + str(queue))
         while queue:
             (vertex, path) = queue.pop(0)
             for next_vertex in graph[vertex] - set(path):
@@ -73,6 +73,18 @@ class RecordUtils(object):
         return [dict(zip(column_dict, d)) for d in zip(*column_dict.values())]
 
 
+    def date_to_string(self, col_mapping, records):
+        """converts datetime or date objects to strings
+        """
+        for rec in records:
+            for col,dformat in col_mapping:
+                if isinstance(rec[col], datetime.date)
+                    rec[col] = datetime.datetime.strftime(dformat)
+                else:
+                    rec[col] = datetime.date.strftime(dformat)
+
+        return records
+
 
 
 class DataFrameDtypeConversion(object):
@@ -89,15 +101,13 @@ class DataFrameDtypeConversion(object):
         return df.fillna(value=np.nan)
 
 
-    def end_date_slicer(self, df, start_slice_date, end_slice_date):
-        ''' slices a bema_calc df by its end_date column
-        :PARAMS: start_slice_date, end_slice_date - these should be converted to datetime
-        :RETURNS: a sliced df
-        '''
-        date_filtered_df = df[(df['end_date'] >= start_slice_date) &
-                (df['end_date'] <= end_slice_date)].reset_index(drop=True)
+    def date_to_string(self, col_mapping, df):
+        """ converts columns of pd Timestamps (np.datetime64) to strings
+        """
+        for col,dformat in col_mapping.items():
+            df[k] = df[k].dt.strftime(dformat)
+        return df
 
-        return date_filtered_df
 
     def compare_two_dfs(self, left, right):
         """ returns sorted dicts for more granular comparison of values

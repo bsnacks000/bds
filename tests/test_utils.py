@@ -1,12 +1,12 @@
 """ tests for the utils module
 """
 
-import unittest 
-from binx.utils import bfs_shortest_path, ObjUtils, RecordUtils, DataFrameDtypeConversion 
+import unittest
+from binx.utils import bfs_shortest_path, ObjUtils, RecordUtils, DataFrameDtypeConversion
 
 import pandas as pd
 from pandas.testing import assert_frame_equal
-import numpy as np 
+import numpy as np
 
 
 class TestUtils(unittest.TestCase):
@@ -40,7 +40,7 @@ class TestUtils(unittest.TestCase):
         ]
         r = self.recordutils.columns_to_records(cols)
         self.assertEqual(test, r)
-    
+
     def test_record_utils_records_to_columns(self):
         records = [
             {'a':1, 'b':3},
@@ -53,7 +53,7 @@ class TestUtils(unittest.TestCase):
 
     def test_obj_util_get_fully_qualified_path(self):
         class Test:
-            pass 
+            pass
         t = Test()
         clspath = self.objutils.get_fully_qualified_path(t)
         self.assertEqual('tests.test_utils.Test', clspath)
@@ -70,10 +70,10 @@ class TestUtils(unittest.TestCase):
         df = pd.DataFrame({'a':[1, None], 'b':[2,None]})
         test = pd.DataFrame({'a':[1, np.nan], 'b':[2,np.nan]})
 
-        d = self.dfconv.df_none_to_nan(df) 
+        d = self.dfconv.df_none_to_nan(df)
         assert_frame_equal(test, d)
 
-    
+
     def test_bfs_shortest_path(self):
 
         graph = {
@@ -91,3 +91,14 @@ class TestUtils(unittest.TestCase):
         test = ['A', 'B', 'D']
         result = bfs_shortest_path(graph, 'A', 'D')
         self.assertEqual(result, test)
+
+
+    def test_dfconv_date_to_string(self):
+        self.fail('TODO')
+
+
+    def test_record_util_date_to_string(self):
+        self.fail('TODO')
+
+
+

@@ -56,7 +56,7 @@ class BaseSerializer(Schema):
 
 
     def __init__(self, *args, **kwargs):
-        self.dateformat_fields = self._set_dateformat_fields()
+
         if 'internal' in kwargs:
             self._InternalClass = kwargs.pop('internal')
         else:
@@ -64,16 +64,18 @@ class BaseSerializer(Schema):
 
         super(Schema, self).__init__(*args, **kwargs)
 
+        self.dateformat_fields = self._set_dateformat_fields()
+
 
     def _set_dateformat_fields(self):
         """ builds a mapping of date formatted column names to string formats for Collection.load_data
         """
         dateformat_fields = {}
         for col,field in self.fields.items():
-            if isinstance(field, fields.Date) or isinstance(field, fields.DateTime):
-                dateformat_fields[col] = field.dateformat
+            if isinstance(field, fields.DateTime):
+                if field.dateformat is not None:
+                    dateformat_fields[col] = field.dateformat
         return dateformat_fields
-
 
 
     @post_load
@@ -330,7 +332,6 @@ class BaseCollection(AbstractCollection):
             self._data += valid
 
         except TypeError as err:
-            l.error(err)
             raise CollectionLoadError('A Serializer must be instantiated with valid fields') from err
 
         except ValidationError as err:
@@ -339,7 +340,6 @@ class BaseCollection(AbstractCollection):
             raise CollectionValidationError('A ValidationError occurred while trying to load {}'.format(self.__class__.__name__)) from err
 
         except Exception as err:
-            l.error(err) #memoized property until it changes
             raise CollectionLoadError('An error occurred while loading and validating records') from err
 
 

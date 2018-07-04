@@ -77,11 +77,13 @@ class RecordUtils(object):
         """converts datetime or date objects to strings
         """
         for rec in records:
-            for col,dformat in col_mapping:
-                if isinstance(rec[col], datetime.date)
+            for col,dformat in col_mapping.items():
+                if isinstance(rec[col], datetime.datetime):
                     rec[col] = datetime.datetime.strftime(dformat)
-                else:
+                elif isinstance(rec[col], datetime.date):
                     rec[col] = datetime.date.strftime(dformat)
+                else: # this means its already in a non-dt format
+                    pass
 
         return records
 
@@ -105,7 +107,8 @@ class DataFrameDtypeConversion(object):
         """ converts columns of pd Timestamps (np.datetime64) to strings
         """
         for col,dformat in col_mapping.items():
-            df[k] = df[k].dt.strftime(dformat)
+            if str(df[col].dtype) == 'datetime64[ns]': # assure that the date column isn't already a string
+                df[col] = df[col].dt.strftime(dformat)
         return df
 
 

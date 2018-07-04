@@ -85,14 +85,11 @@ class TestBaseSerializer(unittest.TestCase):
 
 class TestBaseCollection(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        #NOTE monkey patch the class
+    def setUp(self):
+        #tests the load method
         BaseCollection.serializer_class = InternalSerializer
         BaseCollection.internal_class = InternalObject
 
-    def setUp(self):
-        #tests the load method
         self.data = [
             {'bdbid': 1, 'name': 'hi-there'},
             {'bdbid': 2, 'name': 'hi-ho'},
@@ -130,7 +127,6 @@ class TestBaseCollection(unittest.TestCase):
 
         ]
 
-        []
 
     def test_base_collection_correctly_loads_good_data(self):
         base = BaseCollection()

@@ -79,9 +79,9 @@ class RecordUtils(object):
         for rec in records:
             for col,dformat in col_mapping.items():
                 if isinstance(rec[col], datetime.datetime):
-                    rec[col] = datetime.datetime.strftime(dformat)
+                    rec[col] = rec[col].strftime(dformat)
                 elif isinstance(rec[col], datetime.date):
-                    rec[col] = datetime.date.strftime(dformat)
+                    rec[col] = rec[col].strftime(dformat)
                 else: # this means its already in a non-dt format
                     pass
 

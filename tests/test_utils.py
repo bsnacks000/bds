@@ -9,6 +9,8 @@ from pandas.testing import assert_frame_equal
 import numpy as np
 from marshmallow import fields
 
+from datetime import datetime, date
+
 class TestUtils(unittest.TestCase):
 
     def setUp(self):
@@ -66,6 +68,7 @@ class TestUtils(unittest.TestCase):
         d = self.dfconv.df_nan_to_none(df)
         assert_frame_equal(d, test, check_dtype=False)
 
+
     def test_dfconv_df_none_to_nan(self):
         df = pd.DataFrame({'a':[1, None], 'b':[2,None]})
         test = pd.DataFrame({'a':[1, np.nan], 'b':[2,np.nan]})
@@ -94,135 +97,33 @@ class TestUtils(unittest.TestCase):
 
 
     def test_dfconv_date_to_string(self):
-        self.fail('TODO')
 
-    def test_record_util_date_to_string_SHOULD_BE_RIGHT(self):
-        rec = [
-        {'a' : "stringgg", 'b' : "07/25/2018 12:00:00", 'c' : np.datetime64("2018-01-25T12:00"), 'd' : 2},
-        {'a' : "anotherstring!" , 'b' : "10/25/2018 12:00:00", 'c' : np.datetime64("2018-02-25T12:00"), 'd' : 3}
+        # note that only datetime objects get converted to pd.Timestamps.
+        # datetime.date objects are loaded in as type object not type pd.TimeStamp
+        records = [
+            {'a': 1, 'b': datetime(2017,5,4, 10, 10, 10), 'c': datetime(2017,5,4)},
+            {'a': 2, 'b': datetime(2017,6,4, 10, 10, 10), 'c': datetime(2018,5,4)},
+            {'a': 3, 'b': datetime(2017,7,4, 10, 10, 10), 'c': datetime(2019,5,4)},
         ]
-        cols = {#'a': fields.Str(),
-                #'b': fields.Str(),
-                0: {'c': ["%Y-%M-%DT%h:%m"]},
-                1: {'c': ["%Y-%M-%DT%h:%m"]}
-                #'d': fields.Int()
-                }
-        #cols = {'a': [1,2], 'b': [3,4]}
-        result = [
-        {'a' : "stringgg",
-         'b' : "07/25/2018 12:00:00",
-         'c' : "01/25/2018 12:00:00",
-         'd':2},
-        {'a' : "anotherstring!" ,
-         'b' : "10/25/2018 12:00:00",
-         'c' : "02/25/2018 12:00:00",
-         'd' : 3}
-        ]
-        self.assertEqual(self.recordutils.date_to_string(cols,rec),result)
-    # def test_record_util_date_to_string1(self):
-    #     rec = [
-    #     {'a' : "stringgg", 'b' : "07/25/2018 12:00:00", 'c' : np.datetime64("2018-01-25T12:00"), 'd' : 2},
-    #     {'a' : "anotherstring!" , 'b' : "10/25/2018 12:00:00", 'c' : np.datetime64("2018-02-25T12:00"), 'd' : 3}
-    #     ]
-    #     cols = {#'a': fields.Str(),
-    #             #'b': fields.Str(),
-    #             'c': fields.DateTime(format="%Y-%M-%DT%h:%m"),
-    #             #'d': fields.Int()
-    #             }
-    #     #cols = {'a': [1,2], 'b': [3,4]}
-    #     result = [
-    #     {'a' : "stringgg",
-    #      'b' : "07/25/2018 12:00:00",
-    #      'c' : "01/25/2018 12:00:00",
-    #      'd':2},
-    #     {'a' : "anotherstring!" ,
-    #      'b' : "10/25/2018 12:00:00",
-    #      'c' : "02/25/2018 12:00:00",
-    #      'd' : 3}
-    #     ]
-    #     self.assertEqual(self.recordutils.date_to_string(cols,rec),result)
-    #
-    # def test_record_util_date_to_string2(self):
-    #     rec = [
-    #     {'a' : "stringgg",
-    #      'b' : "07/25/2018 12:00:00",
-    #      'c' : np.datetime64("2018-01-25T12:00"),
-    #      'd' : 2},
-    #
-    #     {'a' : "anotherstring!" ,
-    #      'b' : "10/25/2018 12:00:00",
-    #      'c' : np.datetime64("2018-02-25T12:00"),
-    #      'd' : 3}
-    #     ]
-    #     cols = {'a': fields.Str(),
-    #             'b': fields.Str(),
-    #             'c': fields.DateTime(format="%Y-%M-%DT%h:%m"),
-    #             'd': fields.Int()
-    #             }
-    #     #cols = {'a': [1,2], 'b': [3,4]}
-    #     result = [
-    #     {'a' : "stringgg", 'b' : "07/25/2018 12:00:00", 'c' : "01/25/2018 12:00:00", 'd':2},
-    #     {'a' : "anotherstring!" , 'b' : "10/25/2018 12:00:00", 'c' : "02/25/2018 12:00:00", 'd':3}
-    #     ]
-    #     self.assertEqual(self.recordutils.date_to_string(cols,rec),result)
-    #
-    def test_record_util_date_to_string3(self):
-        rec = [
-        {'a' : "stringgg",
-         'b' : "07/25/2018 12:00:00",
-         'c' : np.datetime64("2018-01-25T12:00"),
-         'd' : 2},
+        col_mapping = {'b': '%Y-%m-%d %H:%M:%S', 'c': '%Y-%m-%d'}
 
-        {'a' : "anotherstring!" ,
-         'b' : "10/25/2018 12:00:00",
-         'c' : np.datetime64("2018-02-25T12:00"),
-         'd' : 3}
-        ]
-        cols = {#'a': fields.Str(),
-                #'b': fields.Str(),
-                'c': "%Y-%M-%DT%h:%m",
-                #'d': fields.Int()
-                }
-        #cols = {'a': [1,2], 'b': [3,4]}
-        result = [
-        {'a' : "stringgg", 'b' : "07/25/2018 12:00:00", 'c' : "01/25/2018 12:00:00", 'd':2},
-        {'a' : "anotherstring!" , 'b' : "10/25/2018 12:00:00", 'c' : "02/25/2018 12:00:00", 'd':3}
-        ]
-        self.assertEqual(self.recordutils.date_to_string(cols,rec),result)
-    def test_record_util_date_to_string3(self):
+        df = pd.DataFrame.from_records(records)
+        test_recs = self.dfconv.date_to_string(col_mapping, df)
 
-        class TestSerializer(BaseSerializer):
-            a = fields.Str()
-            b = fields.Str()
-            c = fields.DateTime(format="%Y-%M-%DT%h:%m")
-            d = fields.Int()
+        self.assertEqual(str(test_recs['b'].dtype), 'object')
+        self.assertEqual(str(test_recs['c'].dtype), 'object')
 
-            cols = {#'a': fields.Str(),
-                    #'b': fields.Str(),
-                    'c': "%Y-%M-%DT%h:%m",
-                    #'d': fields.Int()
-                    }
-        rec = [
-        {'a' : "stringgg",
-         'b' : "07/25/2018 12:00:00",
-         'c' : np.datetime64("2018-01-25T12:00"),
-         'd' : 2},
+    def test_record_util_date_to_string(self):
 
-        {'a' : "anotherstring!" ,
-         'b' : "10/25/2018 12:00:00",
-         'c' : np.datetime64("2018-02-25T12:00"),
-         'd' : 3}
+        records = [
+            {'a': 1, 'b': datetime(2017,5,4, 10, 10, 10), 'c': date(2017,5,4)},
         ]
-        cols = {#'a': fields.Str(),
-                #'b': fields.Str(),
-                'c': "%Y-%M-%DT%h:%m",
-                #'d': fields.Int()
-                }
-        #cols = {'a': [1,2], 'b': [3,4]}
-        result = [
-        {'a' : "stringgg", 'b' : "07/25/2018 12:00:00", 'c' : "01/25/2018 12:00:00", 'd':2},
-        {'a' : "anotherstring!" , 'b' : "10/25/2018 12:00:00", 'c' : "02/25/2018 12:00:00", 'd':3}
-        ]
-        self.assertEqual(self.recordutils.date_to_string(cols,rec),result)
 
-#unittest.main()
+        col_mapping = {'b': '%Y-%m-%d %H:%M:%S', 'c': '%Y-%m-%d'}
+        test = [{'a': 1, 'b': '2017-05-04 10:10:10', 'c': '2017-05-04'}]
+
+        test_recs = self.recordutils.date_to_string(col_mapping, records)
+
+        self.assertListEqual(test, test_recs)
+
+

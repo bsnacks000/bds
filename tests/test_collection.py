@@ -10,6 +10,7 @@ from pandas.testing import assert_frame_equal, assert_series_equal
 from marshmallow import fields
 from marshmallow.exceptions import ValidationError
 
+from datetime import datetime, date
 from pprint import pprint
 
 
@@ -27,6 +28,11 @@ class InternalDtypeTestSerializer(BaseSerializer):
     datet = fields.DateTime('%Y-%m-%d %H:%M:%S', allow_none=True)
     tf = fields.Bool(allow_none=True)
     some_list = fields.List(fields.Integer, allow_none=True)
+
+class DateStringFormatTestSerializer(BaseSerializer):
+    a = fields.Integer()
+    b = fields.DateTime(format='%Y-%m-%d %H:%M:%S')
+    c = fields.Date(format='%Y-%m-%d')
 
 
 class TestInternalObject(unittest.TestCase):
@@ -80,7 +86,11 @@ class TestBaseSerializer(unittest.TestCase):
 
 
     def test_serializer_dateformat_fields(self):
-        self.fail('TODO')
+
+        s = DateStringFormatTestSerializer(internal=InternalObject, strict=True)
+        test = {'b': '%Y-%m-%d %H:%M:%S', 'c': '%Y-%m-%d'}
+        self.assertDictEqual(test, s.dateformat_fields)
+
 
 
 class TestBaseCollection(unittest.TestCase):
@@ -250,4 +260,29 @@ class TestBaseCollection(unittest.TestCase):
 
 
     def test_datetime_and_date_objects_get_correctly_parsed_by_load_data(self):
-        self.fail('TODO')
+        BaseCollection.serializer_class = DateStringFormatTestSerializer
+
+        records = [
+            {'a': 1, 'b': datetime(2017,5,4, 10, 10, 10), 'c': date(2017,5,4)},
+            {'a': 2, 'b': datetime(2017,6,4, 10, 10, 10), 'c': date(2018,5,4)},
+            {'a': 3, 'b': datetime(2017,7,4, 10, 10, 10), 'c': date(2019,5,4)},
+        ]
+
+        b = BaseCollection()
+        b.load_data(records)
+
+        test = [
+            {'a': 1, 'b': '2017-05-04 10:10:10', 'c': '2017-05-04'},
+            {'a': 2, 'b': '2017-06-04 10:10:10', 'c': '2018-05-04'},
+            {'a': 3, 'b': '2017-07-04 10:10:10', 'c': '2019-05-04'}]
+
+        self.assertListEqual(test, b.data)
+
+        # testing on a dataframe
+
+        df = pd.DataFrame.from_records(records)
+        b = BaseCollection()
+        b.load_data(records)
+
+        self.assertListEqual(b.data, test)
+

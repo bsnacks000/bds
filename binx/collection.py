@@ -75,6 +75,11 @@ class BaseSerializer(Schema):
             if isinstance(field, fields.DateTime):
                 if field.dateformat is not None:
                     dateformat_fields[col] = field.dateformat
+            elif isinstance(field, fields.Date):
+                if hasattr(field, 'dateformat'):
+                    dateformat_fields[col] = field.dateformat
+                else:
+                    dateformat_fields[col] = '%Y-%m-%d' # we set this as a default for datetime.date based objects
         return dateformat_fields
 
 
@@ -173,12 +178,6 @@ class BaseCollection(AbstractCollection):
     def __init__(self):
         self._data = []
         self._serializer = self.serializer_class(internal=self.__class__.internal_class, strict=True)
-        self._return_self()
-
-    def _return_self(self):
-        """ allows chaining instantiation with load
-        """
-        return self
 
 
     @classmethod

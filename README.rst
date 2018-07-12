@@ -13,7 +13,7 @@ binx
         :target: https://binx.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
-:version: 0.2.0
+:version: 0.2.1
 
 
 Interfaces for an in-memory datastore and calc framework using marshmallow + pandas

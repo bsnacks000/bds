@@ -37,7 +37,7 @@ class BaseSerializer(Schema):
     It also provides a mapping of numpy dtypes to a select amount of marshmallow field name which helps optimize
     memory in the to_dataframe object
     """
-    
+
     registered_colls = set()
 
     numpy_map = {
@@ -63,6 +63,24 @@ class BaseSerializer(Schema):
             raise InternalNotDefinedError('An InternalObject class must be instantiated with this Collection')
 
         super(Schema, self).__init__(*args, **kwargs)
+
+        self.dateformat_fields = self._set_dateformat_fields()
+
+
+    def _set_dateformat_fields(self):
+        """ builds a mapping of date formatted column names to string formats for Collection.load_data
+        """
+        dateformat_fields = {}
+        for col,field in self.fields.items():
+            if isinstance(field, fields.DateTime):
+                if field.dateformat is not None:
+                    dateformat_fields[col] = field.dateformat
+            elif isinstance(field, fields.Date):
+                if hasattr(field, 'dateformat'):
+                    dateformat_fields[col] = field.dateformat
+                else:
+                    dateformat_fields[col] = '%Y-%m-%d' # we set this as a default for datetime.date based objects
+        return dateformat_fields
 
 
     @post_load
@@ -160,12 +178,6 @@ class BaseCollection(AbstractCollection):
     def __init__(self):
         self._data = []
         self._serializer = self.serializer_class(internal=self.__class__.internal_class, strict=True)
-        self._return_self()
-
-    def _return_self(self):
-        """ allows chaining instantiation with load 
-        """
-        return self
 
 
     @classmethod
@@ -254,7 +266,6 @@ class BaseCollection(AbstractCollection):
             current_adapter = adapter_class() # for each adapter class we push the input_collection and a context
             adapter_output = current_adapter(current_input, **current_context) # adapt data to the next type of collection
             current_context = {**current_context, **adapter_output.context} # NOTE this is will fail on py3.4
-            #print('current_context', current_context)
             current_input = adapter_output.collection
 
         adapter_output._context = current_context
@@ -278,15 +289,41 @@ class BaseCollection(AbstractCollection):
         return df
 
 
+    def _clean_dataframe(self, df):
+        """ cleans and converts formats on a dataframe
+        """
+        formatfields = self.serializer.dateformat_fields
+
+        util = DataFrameDtypeConversion()
+        df = util.df_nan_to_none(df)
+        if len(formatfields) > 0:
+            date_col_mapping = self.serializer.dateformat_fields
+            df = util.date_to_string(formatfields, df)
+
+        records = df.to_dict('records')
+        return records
+
+    def _clean_records(self, records):
+        formatfields = self.serializer.dateformat_fields
+
+        util = RecordUtils()
+        #TODO should check nans here but need a faster algo
+
+        if len(formatfields) > 0:
+            records = util.date_to_string(formatfields, records)
+
+        return records
+
+
     def load_data(self, records):
         """default implementation. Defaults to handling lists of python-dicts (records).
         #TODO -- create a drop_duplicates option and use pandas to drop the dupes
         """
         try:
             if isinstance(records, pd.DataFrame):
-                util = DataFrameDtypeConversion()
-                records = util.df_nan_to_none(records)
-                records = records.to_dict('records')
+                records = self._clean_dataframe(records)
+            else:
+                records = self._clean_records(records)
 
             # append to the data dictionary
             # NOTE changing this to handle tuples in marsh 2.x
@@ -294,7 +331,6 @@ class BaseCollection(AbstractCollection):
             self._data += valid
 
         except TypeError as err:
-            l.error(err)
             raise CollectionLoadError('A Serializer must be instantiated with valid fields') from err
 
         except ValidationError as err:
@@ -303,8 +339,8 @@ class BaseCollection(AbstractCollection):
             raise CollectionValidationError('A ValidationError occurred while trying to load {}'.format(self.__class__.__name__)) from err
 
         except Exception as err:
-            l.error(err) #memoized property until it changes
             raise CollectionLoadError('An error occurred while loading and validating records') from err
+
 
     @classmethod
     def adapt(cls, input_collection, **adapter_context):
@@ -331,14 +367,12 @@ class BaseCollection(AbstractCollection):
                 input_collection.__class__.__name__, cls.__name__))
 
 
-
     def to_dataframe(self):
         """ returns a dataframe representation of the object. This wraps the data property in a
         pd.DataFrame
         converts any columns that can be converted to datetime
         """
-        df = self._dataframe_with_dtypes(self.data)
-        return df
+        return self._dataframe_with_dtypes(self.data)
 
 
     def to_json(self):

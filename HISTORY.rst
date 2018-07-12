@@ -11,6 +11,11 @@ History
 
 0.2.0 (2018-07-03)
 ------------------
-* Built adapter module and related functionality 
+* Built adapter module and related functionality
 * removed calc_factory API (possibly will be re-included in a later build)
-* created the CollectionBuilder class 
+* created the CollectionBuilder class
+
+
+0.2.1 (2018-07-12)
+------------------
+* patched issue relating to datetime/datestrings not being parsed by collections

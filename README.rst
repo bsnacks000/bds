@@ -13,7 +13,7 @@ binx
         :target: https://binx.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
-:version: 0.2.0
+:version: 0.2.1
 
 
 Interfaces for an in-memory datastore and calc framework using marshmallow + pandas
@@ -36,7 +36,7 @@ This can help you quickly scale up your scripts and create uniformity between yo
 binx provides:
 
 * A declarative style in memory datastore (collections)
-* interfaces and base classes for processing and scaling up your calc scripts (calc, factory)
+* An Adapter API that helps model/manage relationships and data transformations between collections (adapter)
 * consistent API for moving your data between json, py-objs, and pandas dataframes
 
 Coming Soon

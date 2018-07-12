@@ -10,6 +10,7 @@ from pandas.testing import assert_frame_equal, assert_series_equal
 from marshmallow import fields
 from marshmallow.exceptions import ValidationError
 
+from datetime import datetime, date
 from pprint import pprint
 
 
@@ -27,6 +28,11 @@ class InternalDtypeTestSerializer(BaseSerializer):
     datet = fields.DateTime('%Y-%m-%d %H:%M:%S', allow_none=True)
     tf = fields.Bool(allow_none=True)
     some_list = fields.List(fields.Integer, allow_none=True)
+
+class DateStringFormatTestSerializer(BaseSerializer):
+    a = fields.Integer()
+    b = fields.DateTime(format='%Y-%m-%d %H:%M:%S')
+    c = fields.Date(format='%Y-%m-%d')
 
 
 class TestInternalObject(unittest.TestCase):
@@ -78,16 +84,22 @@ class TestBaseSerializer(unittest.TestCase):
         self.assertEqual(out['bdbid'], np.dtype('int64'))
         self.assertEqual(out['name'], np.dtype('<U'))
 
-class TestBaseCollection(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        #NOTE monkey patch the class
-        BaseCollection.serializer_class = InternalSerializer
-        BaseCollection.internal_class = InternalObject
+    def test_serializer_dateformat_fields(self):
+
+        s = DateStringFormatTestSerializer(internal=InternalObject, strict=True)
+        test = {'b': '%Y-%m-%d %H:%M:%S', 'c': '%Y-%m-%d'}
+        self.assertDictEqual(test, s.dateformat_fields)
+
+
+
+class TestBaseCollection(unittest.TestCase):
 
     def setUp(self):
         #tests the load method
+        BaseCollection.serializer_class = InternalSerializer
+        BaseCollection.internal_class = InternalObject
+
         self.data = [
             {'bdbid': 1, 'name': 'hi-there'},
             {'bdbid': 2, 'name': 'hi-ho'},
@@ -125,7 +137,6 @@ class TestBaseCollection(unittest.TestCase):
 
         ]
 
-        []
 
     def test_base_collection_correctly_loads_good_data(self):
         base = BaseCollection()
@@ -228,19 +239,6 @@ class TestBaseCollection(unittest.TestCase):
         base = BaseCollection()
         base.load_data(self.dtype_test_data)
 
-        # df = base.to_dataframe()
-        # correct_dtypes = pd.Series([
-        #     np.dtype('int64'),
-        #     np.dtype('object'),
-        #     np.dtype('float64'),
-        #     np.dtype('datetime64[ns]'),
-        #     np.dtype('datetime64[ns]'),
-        #     np.dtype('bool'),
-        #     np.dtype('object')
-        #     ], index=['id', 'name', 'number', 'date', 'datet', 'tf', 'some_list'])
-            
-        # assert_series_equal(df.dtypes, correct_dtypes, check_names=False)
-
         base2 = BaseCollection()
         base2.load_data(self.dtype_test_data_none)
         df = base2.to_dataframe()
@@ -259,3 +257,32 @@ class TestBaseCollection(unittest.TestCase):
 
         BaseCollection in base.internal.registered_colls
         self.assertTrue(test)
+
+
+    def test_datetime_and_date_objects_get_correctly_parsed_by_load_data(self):
+        BaseCollection.serializer_class = DateStringFormatTestSerializer
+
+        records = [
+            {'a': 1, 'b': datetime(2017,5,4, 10, 10, 10), 'c': date(2017,5,4)},
+            {'a': 2, 'b': datetime(2017,6,4, 10, 10, 10), 'c': date(2018,5,4)},
+            {'a': 3, 'b': datetime(2017,7,4, 10, 10, 10), 'c': date(2019,5,4)},
+        ]
+
+        b = BaseCollection()
+        b.load_data(records)
+
+        test = [
+            {'a': 1, 'b': '2017-05-04 10:10:10', 'c': '2017-05-04'},
+            {'a': 2, 'b': '2017-06-04 10:10:10', 'c': '2018-05-04'},
+            {'a': 3, 'b': '2017-07-04 10:10:10', 'c': '2019-05-04'}]
+
+        self.assertListEqual(test, b.data)
+
+        # testing on a dataframe
+
+        df = pd.DataFrame.from_records(records)
+        b = BaseCollection()
+        b.load_data(records)
+
+        self.assertListEqual(b.data, test)
+

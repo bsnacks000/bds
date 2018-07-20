@@ -125,5 +125,18 @@ class TestUtils(unittest.TestCase):
         test_recs = self.recordutils.date_to_string(col_mapping, records)
 
         self.assertListEqual(test, test_recs)
+    
+    def test_record_util_date_to_string_with_numpy_and_pandas(self):
+        records = [
+            {'a': 1, 'b': pd.Timestamp(2017,5,4, 10, 10, 10), 'c': np.datetime64('2017-05-04')},
+        ]
+
+        col_mapping = {'b': '%Y-%m-%d %H:%M:%S', 'c': '%Y-%m-%d'}
+        test = [{'a': 1, 'b': '2017-05-04 10:10:10', 'c': '2017-05-04'}]
+
+        test_recs = self.recordutils.date_to_string(col_mapping, records)
+
+        self.assertListEqual(test, test_recs)
+    
 
 

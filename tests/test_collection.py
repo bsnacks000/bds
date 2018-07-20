@@ -35,6 +35,7 @@ class DateStringFormatTestSerializer(BaseSerializer):
     c = fields.Date(format='%Y-%m-%d')
 
 
+
 class TestInternalObject(unittest.TestCase):
 
     @classmethod
@@ -90,7 +91,7 @@ class TestBaseSerializer(unittest.TestCase):
         s = DateStringFormatTestSerializer(internal=InternalObject, strict=True)
         test = {'b': '%Y-%m-%d %H:%M:%S', 'c': '%Y-%m-%d'}
         self.assertDictEqual(test, s.dateformat_fields)
-
+    
 
 
 class TestBaseCollection(unittest.TestCase):
@@ -154,7 +155,7 @@ class TestBaseCollection(unittest.TestCase):
             base.load_data(self.data)
 
 
-    def test_base_collection_rasies_ValidationError(self):
+    def test_base_collection_raises_ValidationError(self):
 
         base = BaseCollection()
 
@@ -285,4 +286,31 @@ class TestBaseCollection(unittest.TestCase):
         b.load_data(records)
 
         self.assertListEqual(b.data, test)
+
+
+    def test_non_required_datetimes_not_present_do_not_raise_utils_key_error(self):
+
+        # if a date field was not required and not provided a KeyError was being raised 
+        # in RecordUtils. We swallow that error and only parse datefields that are in the 
+        # loaded data 
+
+        BaseCollection.serializer_class = DateStringFormatTestSerializer
+
+        records = [
+            {'a': 1, 'b': datetime(2017,5,4, 10, 10, 10)},
+            {'a': 2, 'c': date(2018,5,4)},
+            {'a': 3, 'b': datetime(2017,7,4, 10, 10, 10), 'c': date(2019,5,4)},
+        ]
+
+        b = BaseCollection()
+        b.load_data(records)
+
+        test = [
+            {'a': 1, 'b': '2017-05-04 10:10:10' },
+            {'a': 2, 'c': '2018-05-04'},
+            {'a': 3, 'b': '2017-07-04 10:10:10', 'c': '2019-05-04'}
+        ]
+
+        self.assertListEqual(test, b.data)
+
 

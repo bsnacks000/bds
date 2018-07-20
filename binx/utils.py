@@ -78,15 +78,21 @@ class RecordUtils(object):
         """
         for rec in records:
             for col,dformat in col_mapping.items():
-                if isinstance(rec[col], datetime.datetime):
-                    rec[col] = rec[col].strftime(dformat)
-                elif isinstance(rec[col], datetime.date):
-                    rec[col] = rec[col].strftime(dformat)
-                else: # this means its already in a non-dt format
-                    pass
+                try:
+                    if isinstance(rec[col], datetime.datetime):
+                        rec[col] = rec[col].strftime(dformat)
+                    elif isinstance(rec[col], datetime.date):
+                        rec[col] = rec[col].strftime(dformat)
+                    elif isinstance(rec[col], np.datetime64):
+                        rec[col] = str(rec[col])
+                    elif isinstnace(rec[col], pd.Timestamp):
+                        rec[col] = rec[col].strftime(dformat)
+                        
+                except KeyError as err: 
+                    # swallowing this will handle any non-required date fields that aren't present
+                    l.warning('Date obj field {} was not available for dt-formatting'.format(col))
 
         return records
-
 
 
 class DataFrameDtypeConversion(object):

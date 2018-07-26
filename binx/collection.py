@@ -282,7 +282,11 @@ class BaseCollection(AbstractCollection):
         # iterate columns and construct a dictionary of pd.Series with correct-dtype
         df_data = {} # a dictionary of pd.Series with dtypes keyed by col names
         for col, dtype in dtype_map.items():
-            df_data[col] = pd.Series(col_data[col], dtype=dtype)
+            try:
+                df_data[col] = pd.Series(col_data[col], dtype=dtype)
+            except KeyError as err:
+                l.warning('Creating df without non-required field {}'.format(col))
+                pass 
 
         df = pd.DataFrame(df_data)
         df = dfutil.df_none_to_nan(df)

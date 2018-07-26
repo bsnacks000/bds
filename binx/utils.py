@@ -116,16 +116,3 @@ class DataFrameDtypeConversion(object):
             if str(df[col].dtype) == 'datetime64[ns]': # assure that the date column isn't already a string
                 df[col] = df[col].dt.strftime(dformat)
         return df
-
-
-    def compare_two_dfs(self, left, right):
-        """ returns sorted dicts for more granular comparison of values
-        """
-
-        left = left.to_dict(orient='list')
-        right = right.to_dict(orient='list')
-
-        left = {k:sorted(v) for k,v in left.items()}
-        right = {k:sorted(v) for k,v in right.items()}
-
-        return left, right

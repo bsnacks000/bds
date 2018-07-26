@@ -288,6 +288,35 @@ class TestBaseCollection(unittest.TestCase):
         self.assertListEqual(b.data, test)
 
 
+    def test_pandas_timestamp_correctly_parsed_by_load_data(self):
+
+        BaseCollection.serializer_class = DateStringFormatTestSerializer
+
+        records = [
+            {'a': 1, 'b': pd.Timestamp(2017,5,4, 10, 10, 10), 'c': pd.Timestamp(2017,5,4)},
+            {'a': 2, 'b': pd.Timestamp(2017,6,4, 10, 10, 10), 'c': pd.Timestamp(2018,5,4)},
+            {'a': 3, 'b': pd.Timestamp(2017,7,4, 10, 10, 10), 'c': pd.Timestamp(2019,5,4)},
+        ]
+
+        b = BaseCollection()
+        b.load_data(records)
+
+        test = [
+            {'a': 1, 'b': '2017-05-04 10:10:10', 'c': '2017-05-04'},
+            {'a': 2, 'b': '2017-06-04 10:10:10', 'c': '2018-05-04'},
+            {'a': 3, 'b': '2017-07-04 10:10:10', 'c': '2019-05-04'}]
+
+        self.assertListEqual(test, b.data)
+
+        # testing on a dataframe
+
+        df = pd.DataFrame.from_records(records)
+        b = BaseCollection()
+        b.load_data(records)
+
+        self.assertListEqual(b.data, test)
+
+
     def test_non_required_datetimes_not_present_do_not_raise_utils_key_error(self):
 
         # if a date field was not required and not provided a KeyError was being raised 
@@ -316,6 +345,16 @@ class TestBaseCollection(unittest.TestCase):
     
     def test_non_required_fields_not_present_do_not_raise_key_error_in_to_dataframe(self):
 
-        self.fail('todo')
+        BaseCollection.serializer_class = InternalSerializer  # these fields are not required  
+
+        records = [{'bdbid': 1}, {'bdbid': 2}]
+
+        b = BaseCollection()
+        b.load_data(records)
+
+        df = b.to_dataframe()
+        
+        self.assertEqual(records, df.to_dict('records'))
+
 
 

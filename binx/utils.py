@@ -85,7 +85,7 @@ class RecordUtils(object):
                         rec[col] = rec[col].strftime(dformat)
                     elif isinstance(rec[col], np.datetime64):
                         rec[col] = str(rec[col])
-                    elif isinstnace(rec[col], pd.Timestamp):
+                    elif isinstance(rec[col], pd.Timestamp):
                         rec[col] = rec[col].strftime(dformat)
                         
                 except KeyError as err: 

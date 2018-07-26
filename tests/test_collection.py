@@ -313,4 +313,9 @@ class TestBaseCollection(unittest.TestCase):
 
         self.assertListEqual(test, b.data)
 
+    
+    def test_non_required_fields_not_present_do_not_raise_key_error_in_to_dataframe(self):
+
+        self.fail('todo')
+
 

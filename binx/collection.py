@@ -4,6 +4,8 @@
 import abc
 import pandas as pd
 import numpy as np
+import copy
+
 from marshmallow import Schema, post_load, fields
 from marshmallow.exceptions import ValidationError
 
@@ -249,7 +251,7 @@ class BaseCollection(AbstractCollection):
             raise TypeError('Only Collections of the same class can be concatenated')
 
     @classmethod
-    def _resolve_adapter_chain(cls, input_collection, **adapter_context):
+    def _resolve_adapter_chain(cls, input_collection, accumulate, **adapter_context):
         """ attempts to resolve the adapter chain using the current class as the target and
         input as the starting class. The adapter context accumulates over each call and ensures that
         kwargs needed for certain adapter calls are guaranteed to make it to the correct adapter.
@@ -271,8 +273,13 @@ class BaseCollection(AbstractCollection):
             adapter_output = current_adapter(current_input, **current_context) # adapt data to the next type of collection
             current_context = {**current_context, **adapter_output.context} # NOTE this is will fail on py3.4
             current_input = adapter_output.collection
+            # if accumulate make a new key in the current context for the current collection the collection name in the registry
+            if accumulate:
+                coll_id = current_input.__name__
+                current_context[] = copy.copy(current_input)
 
-        adapter_output._context = current_context
+
+        adapter_output._context = current_context # set final context
         return adapter_output
 
     def _dataframe_with_dtypes(self, data):
@@ -351,7 +358,7 @@ class BaseCollection(AbstractCollection):
 
 
     @classmethod
-    def adapt(cls, input_collection, accumulate=True, **adapter_context):
+    def adapt(cls, input_collection, accumulate=False, **adapter_context):
         """ Attempts to adapt the input collection instance into a collection of this type by
         resolving the adapter chain for the input collection. Any kwargs passed in are handed over to the resolver.
         colla = CollectionA()
@@ -365,15 +372,9 @@ class BaseCollection(AbstractCollection):
         if not issubclass(input_collection.__class__, BaseCollection): #check if its a Collection or raise TypeError
             raise TypeError('The input to adapt must be a Collection')
 
-
         try:
-            if 'accumulated_collections' in adapter_context:
-                raise ValueError('The key "accumulated_collections" is reserved. Please use a different key word in the adapter chain')
+            adapted = cls._resolve_adapter_chain(input_collection, accumulate, **adapter_context) # attempt to resolve the adapter chain
 
-            if accumulate:  # if accumulate then we add the key 'collections' to context in order to accumulate collections during adapter call
-                adapter_context['accumulated_collections'] = []
-
-            adapted = cls._resolve_adapter_chain(input_collection, **adapter_context) # attempt to resolve the adapter chain
         except Exception as err:
             raise AdapterChainError('An error occured within the adapter chain') from err
 

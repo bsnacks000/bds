@@ -33,7 +33,10 @@ class AdapterOutputContainer(object):
     """ A generic container class for moving data out of adapters. It holds the target output
     collection along with any context data that might need to be passed on to the caller or
     another adapter. Essentially 'side effects' from the adaptation that might be needed further along
-    in the adapter chain
+    in the adapter chain.
+
+    NOTE that the context in a container instance only relates to its immediate adapter call. It
+    does contain any of the surrounding context. This gets accumulated in BaseCollection._resolve_adapter_chain
 
     This is used internally in Adapter.__call__
     """
@@ -45,9 +48,6 @@ class AdapterOutputContainer(object):
         for k,v in context.items():
             setattr(self, k, v)  # set on class and load into a context dict for easy access
             self._context[k] = v # load in context
-
-        if 'accumulated_collections' in self._context: # store a shallow copy if accumulate was set to True in the adapter chain
-            self._context['accumulated_collections'] += [copy.copy(collection)]
 
     @property
     def context(self):

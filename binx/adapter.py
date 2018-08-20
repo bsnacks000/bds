@@ -9,6 +9,7 @@ Once the class is declared the user register's the adapter using the register st
 import abc
 from .registry import register_adapter_to_collection, register_adaptable_collection
 
+import copy
 
 def check_adapter_call(method):
     """ a helper decorater for the __call__ method that does some type checking
@@ -45,6 +46,9 @@ class AdapterOutputContainer(object):
             setattr(self, k, v)  # set on class and load into a context dict for easy access
             self._context[k] = v # load in context
 
+        if 'accumulated_collections' in self._context: # store a shallow copy if accumulate was set to True in the adapter chain
+            self._context['accumulated_collections'] += [copy.copy(collection)]
+
     @property
     def context(self):
         return self._context
@@ -76,7 +80,7 @@ class AbstractAdapter(abc.ABC):
         """
         # get the data from the input_collection  (collection.data or collection.to_dataframe() or whatever...)
         # get the context args you need... context.pop('some-key') or context['some-key']
-        
+
         #return self.render_return(collection, **context) #NOTE this is an example of how to return from adapt
 
 

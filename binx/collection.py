@@ -178,7 +178,7 @@ class BaseCollection(AbstractCollection):
     def __init__(self):
         self._data = []
         self._serializer = self.serializer_class(internal=self.__class__.internal_class, strict=True)
-
+        self.__collection_id = uuid.uuid4().hex
 
     @classmethod
     def get_fully_qualified_class_path(cls):
@@ -213,6 +213,10 @@ class BaseCollection(AbstractCollection):
         """ returns a class of the internal object
         """
         return self.__class__.internal_class
+
+    @property
+    def collection_id(self):
+        return self.__collection_id
 
 
     def __iter__(self):
@@ -286,7 +290,7 @@ class BaseCollection(AbstractCollection):
                 df_data[col] = pd.Series(col_data[col], dtype=dtype)
             except KeyError as err:
                 l.warning('Creating df without non-required field {}'.format(col))
-                pass 
+                pass
 
         df = pd.DataFrame(df_data)
         df = dfutil.df_none_to_nan(df)
@@ -347,7 +351,7 @@ class BaseCollection(AbstractCollection):
 
 
     @classmethod
-    def adapt(cls, input_collection, **adapter_context):
+    def adapt(cls, input_collection, accumulate=True, **adapter_context):
         """ Attempts to adapt the input collection instance into a collection of this type by
         resolving the adapter chain for the input collection. Any kwargs passed in are handed over to the resolver.
         colla = CollectionA()
@@ -357,9 +361,18 @@ class BaseCollection(AbstractCollection):
 
         This method returns a new instance of the adapted class (the caller)
         """
+
         if not issubclass(input_collection.__class__, BaseCollection): #check if its a Collection or raise TypeError
             raise TypeError('The input to adapt must be a Collection')
+
+
         try:
+            if 'accumulated_collections' in adapter_context:
+                raise ValueError('The key "accumulated_collections" is reserved. Please use a different key word in the adapter chain')
+
+            if accumulate:  # if accumulate then we add the key 'collections' to context in order to accumulate collections during adapter call
+                adapter_context['accumulated_collections'] = []
+
             adapted = cls._resolve_adapter_chain(input_collection, **adapter_context) # attempt to resolve the adapter chain
         except Exception as err:
             raise AdapterChainError('An error occured within the adapter chain') from err

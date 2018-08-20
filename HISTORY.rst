@@ -21,4 +21,5 @@ History
 * patched issue relating to datetime/datestrings not being parsed by collections
 
 0.2.2 (2018-07-26)
-* patched issue relating to introspection of required columns (issue #7-#8) 
+------------------
+* patched issue relating to introspection of required columns (issue #7-#8)

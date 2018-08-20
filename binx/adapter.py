@@ -9,6 +9,7 @@ Once the class is declared the user register's the adapter using the register st
 import abc
 from .registry import register_adapter_to_collection, register_adaptable_collection
 
+import copy
 
 def check_adapter_call(method):
     """ a helper decorater for the __call__ method that does some type checking
@@ -32,7 +33,10 @@ class AdapterOutputContainer(object):
     """ A generic container class for moving data out of adapters. It holds the target output
     collection along with any context data that might need to be passed on to the caller or
     another adapter. Essentially 'side effects' from the adaptation that might be needed further along
-    in the adapter chain
+    in the adapter chain.
+
+    NOTE that the context in a container instance only relates to its immediate adapter call. It
+    does contain any of the surrounding context. This gets accumulated in BaseCollection._resolve_adapter_chain
 
     This is used internally in Adapter.__call__
     """
@@ -76,7 +80,7 @@ class AbstractAdapter(abc.ABC):
         """
         # get the data from the input_collection  (collection.data or collection.to_dataframe() or whatever...)
         # get the context args you need... context.pop('some-key') or context['some-key']
-        
+
         #return self.render_return(collection, **context) #NOTE this is an example of how to return from adapt
 
 

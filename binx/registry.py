@@ -5,6 +5,7 @@ are created by the user and registered at runtime.
 
 from .exceptions import RegistryError
 from .utils import bfs_shortest_path
+import warnings
 
 _collection_registry = {}
 
@@ -16,16 +17,19 @@ def register_collection(cls):
     fullpath = cls.__module__ + '.' + cls.__name__
 
     if fullpath in _collection_registry: # if the fullpath is already
-        raise RegistryError('The classname {} has already been registered. Create a different name for your collection'.format(fullpath))
+        #raise RegistryError('The classname {} has already been registered. Create a different name for your collection'.format(fullpath))
 
-    # you must do the lookup by fullpath
-    _collection_registry[fullpath] = (cls, {
-        'serializer_class': cls.serializer_class,
-        'internal_class': cls.internal_class,
-        'registered_adapters': set(),  #NOTE these are the classes registered adapters
-        'adaptable_from': set()   #NOTE these are other collection objects a coll can be adapted from
-    })
-    #pprint(_collection_registry)
+        _collection_registry[fullpath][0] = cls
+        warnings.warn("The reference to {} has been overridden in the registry. This might potentially cause issues in any adapter chain where this class was referenced.".format(fullpath))
+
+    else:
+        # you must do the lookup by fullpath
+        _collection_registry[fullpath] = [cls, {
+            'serializer_class': cls.serializer_class,
+            'internal_class': cls.internal_class,
+            'registered_adapters': set(),  #NOTE these are the classes registered adapters
+            'adaptable_from': set()   #NOTE these are other collection objects a coll can be adapted from
+        }]
 
 
 def get_class_from_collection_registry(classname):

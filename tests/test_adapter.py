@@ -219,19 +219,3 @@ class TestAdapterCollectionIntegration(unittest.TestCase):
 
         self.assertEqual(test_data, test_c_coll.data)
         self.assertEqual(test_context, context)
-
-    def test_adapter_accumulates_collections(self):
-        # test for issue 10 -- accumulate feature
-
-        test_a_coll = self.TestAACollection()
-        test_a_coll.load_data([{'a': 41}])
-
-        test_c_coll, context = self.TestCCCollection.adapt(test_a_coll, accumulate=True, foo='bar')
-
-        # accumulate True means BB should be in there
-        self.assertIn('TestBBCollection', context.keys())
-        self.assertIsInstance(context['TestBBCollection'], self.TestBBCollection)
-
-        self.assertNotIn('TestCCCollection',context.keys())
-        self.assertNotIn('TestAACollection',context.keys())
-

@@ -5,6 +5,7 @@ import abc
 import pandas as pd
 import numpy as np
 import copy
+import uuid
 
 from marshmallow import Schema, post_load, fields
 from marshmallow.exceptions import ValidationError
@@ -267,17 +268,16 @@ class BaseCollection(AbstractCollection):
         current_input = input_collection  # NOTE this is an instance with data to be transformed.. not a class
         adapter_output = None
 
-        for adapter_class in adapters:
-            #NOTE custom error handling must be added here
+        for i, adapter_class in enumerate(adapters):
+            # if accumulate make a new key in the current context for the current collection the collection name in the registry
+            if accumulate and i > 0:
+                coll_id = current_input.__class__.__name__
+                current_context[coll_id] = copy.copy(current_input)
+
             current_adapter = adapter_class() # for each adapter class we push the input_collection and a context
             adapter_output = current_adapter(current_input, **current_context) # adapt data to the next type of collection
             current_context = {**current_context, **adapter_output.context} # NOTE this is will fail on py3.4
             current_input = adapter_output.collection
-            # if accumulate make a new key in the current context for the current collection the collection name in the registry
-            if accumulate:
-                coll_id = current_input.__name__
-                current_context[] = copy.copy(current_input)
-
 
         adapter_output._context = current_context # set final context
         return adapter_output

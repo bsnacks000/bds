@@ -152,9 +152,9 @@ class TestAdapterCollectionIntegration(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # These test the creation of the adapter chain 
+        # These test the creation of the adapter chain
 
-        builder = CollectionBuilder('TestAA') 
+        builder = CollectionBuilder('TestAA')
         cls.TestAACollection = builder.build(TestASerializer)
 
         builder.name = 'TestBB'
@@ -204,14 +204,14 @@ class TestAdapterCollectionIntegration(unittest.TestCase):
         self.TestAACollection = None
         self.TestCCCollection = None
 
-    
+
     def test_integration_c_adapts_a(self):
-        # tests that given the above setup, an instance of TestCCollection will be made 
-        # from an instance of TestACollection 
+        # tests that given the above setup, an instance of TestCCollection will be made
+        # from an instance of TestACollection
 
         test_a_coll = self.TestAACollection()
         test_a_coll.load_data([{'a': 41}])
-        
+
         test_c_coll, context = self.TestCCCollection.adapt(test_a_coll, foo='bar')
         #print(test_c_coll.data, context)
         test_data = [{'c': 43, 'b': 42, 'a': 41}]
@@ -219,3 +219,19 @@ class TestAdapterCollectionIntegration(unittest.TestCase):
 
         self.assertEqual(test_data, test_c_coll.data)
         self.assertEqual(test_context, context)
+
+    def test_adapter_accumulates_collections(self):
+        # test for issue 10 -- accumulate feature
+
+        test_a_coll = self.TestAACollection()
+        test_a_coll.load_data([{'a': 41}])
+
+        test_c_coll, context = self.TestCCCollection.adapt(test_a_coll, accumulate=True, foo='bar')
+
+        # accumulate True means BB should be in there
+        self.assertIn('TestBBCollection', context.keys())
+        self.assertIsInstance(context['TestBBCollection'], self.TestBBCollection)
+
+        self.assertNotIn('TestCCCollection',context.keys())
+        self.assertNotIn('TestAACollection',context.keys())
+

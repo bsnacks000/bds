@@ -34,17 +34,27 @@ class TestRegistry(unittest.TestCase):
             obj = get_class_from_collection_registry('SomeClass')
 
 
-    # def test_registry_raises_if_two_classes_have_same_name(self):
-        # removed based on issue 1
+    def test_registry_override_raises_registry_error_if_has_adaptable_collections(self):
 
-    #     with self.assertRaises(RegistryError):
+        class TestBaseA(BaseCollection):
+            pass
 
-    #         # NOTE user  cannot declare two classes in the same module
-    #         class TestBaseA(BaseCollection):
-    #             pass
+        register_adaptable_collection(TestBaseA.get_fully_qualified_class_path(), 'something')
+        with self.assertRaises(RegistryError):
+            class TestBaseA(BaseCollection):
+                pass
 
-    #         class TestBaseA(BaseCollection):
-    #             pass
+
+    def test_registry_override_raises_registry_error_if_has_registered_adapters(self):
+
+        class TestBaseAA(BaseCollection):
+            pass
+
+        register_adapter_to_collection(TestBaseAA.get_fully_qualified_class_path(), 'something')
+        with self.assertRaises(RegistryError):
+            class TestBaseAA(BaseCollection):
+                pass
+
 
     def test_registry_warns_and_replaces_ref_if_given_same_path(self):
 

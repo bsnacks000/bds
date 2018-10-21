@@ -439,7 +439,6 @@ class CollectionBuilder(AbstractCollectionBuilder):
         """
         class_attrs = {'serializer_class': serializer_class, 'internal_class': internal_class}
         x =  type(name, (base_class, ), class_attrs)
-        print(x)
         return x
 
     def _parse_names(self, name):

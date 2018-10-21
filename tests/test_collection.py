@@ -357,4 +357,30 @@ class TestBaseCollection(unittest.TestCase):
         self.assertEqual(records, df.to_dict('records'))
 
 
+    def test_empty_collection_returns_empty_dataframe_in_to_dataframe(self):
+
+        BaseCollection.serializer_class = InternalSerializer 
+
+        records = []
+
+        b = BaseCollection()
+        b.load_data(records)
+
+        df = b.to_dataframe()
+
+        self.assertIsInstance(df, pd.DataFrame)
+        self.assertEqual(len(df), 0)
+
+
+    def test_empty_collection_raises_CollectionLoadError_if_passed_empty_record_collection(self):
+
+        BaseCollection.serializer_class = InternalSerializer 
+
+        records = []
+
+        b = BaseCollection()
+        with self.assertRaises(CollectionLoadError):
+            b.load_data(records, raise_on_empty=True)
+
+
 

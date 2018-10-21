@@ -21,7 +21,6 @@ l = logging.getLogger(__name__)
 
 # a place for the registry of internals after they are constructed
 
-
 class InternalObject(object):
     """ a namespace class for instance checking for an internally used model object
     It is otherwise a normal python object. _Internals are used as medium for
@@ -287,7 +286,11 @@ class BaseCollection(AbstractCollection):
         """
         rutil = RecordUtils()
         dfutil = DataFrameDtypeConversion()
-        col_data = rutil.records_to_columns(data)
+        try:
+            col_data = rutil.records_to_columns(data)
+        except IndexError:
+            return pd.DataFrame()
+
         dtype_map = self.serializer.get_numpy_fields()
 
         # iterate columns and construct a dictionary of pd.Series with correct-dtype
@@ -330,11 +333,14 @@ class BaseCollection(AbstractCollection):
         return records
 
 
-    def load_data(self, records):
+    def load_data(self, records, raise_on_empty=False):
         """default implementation. Defaults to handling lists of python-dicts (records).
         #TODO -- create a drop_duplicates option and use pandas to drop the dupes
         """
         try:
+            if raise_on_empty and len(records) == 0:
+                raise ValueError('An empty set of records was passed to load_data')
+
             if isinstance(records, pd.DataFrame):
                 records = self._clean_dataframe(records)
             else:

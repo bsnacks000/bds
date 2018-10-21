@@ -341,7 +341,6 @@ class TestBaseCollection(unittest.TestCase):
         ]
 
         self.assertListEqual(test, b.data)
-
     
     def test_non_required_fields_not_present_do_not_raise_key_error_in_to_dataframe(self):
 
@@ -357,10 +356,38 @@ class TestBaseCollection(unittest.TestCase):
         self.assertEqual(records, df.to_dict('records'))
 
 
+    def test_non_required_int_fields_do_not_raise_TypeError_in_to_dataframe(self):
+
+        class TestSerializer(BaseSerializer):
+            test_id = fields.Integer(allow_none=True)
+
+        BaseCollection.serializer_class = TestSerializer  # these fields are not required  
+
+        records = [{'test_id': None}, {'test_id': 2}]
+        #expected_result = [{'test_id': np.nan}, {'test_id': 2.0}]
+        b = BaseCollection()
+        b.load_data(records)
+        df = b.to_dataframe()
+        check = df.to_dict('records')
+        
+        self.assertTrue(np.isnan(check[0]['test_id'])) #NOTE coerced to nan and float 
+        self.assertEqual(check[1]['test_id'], 2.0)
+
+    
+    def test_non_required_date_fields_do_not_raiseTypeError_in_to_dataframe(self):
+        class TestSerializer(BaseSerializer):
+            test_date = fields.Integer('%Y-%m-%d',  allow_none=True)
+
+        BaseCollection.serializer_class = TestSerializer  # these fields are not required  
+
+        records = [{'test_id': None}, {'test_id': 2}]
+        
+        self.fail('todo')
+
+
     def test_empty_collection_returns_empty_dataframe_in_to_dataframe(self):
 
         BaseCollection.serializer_class = InternalSerializer 
-
         records = []
 
         b = BaseCollection()
@@ -375,12 +402,8 @@ class TestBaseCollection(unittest.TestCase):
     def test_empty_collection_raises_CollectionLoadError_if_passed_empty_record_collection(self):
 
         BaseCollection.serializer_class = InternalSerializer 
-
         records = []
 
         b = BaseCollection()
         with self.assertRaises(CollectionLoadError):
             b.load_data(records, raise_on_empty=True)
-
-
-

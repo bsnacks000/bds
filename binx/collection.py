@@ -298,7 +298,7 @@ class BaseCollection(AbstractCollection):
         for col, dtype in dtype_map.items():
             try:
                 if dtype == np.dtype('int') and any([c is None for c in col_data[col]]):
-                    dtype = None    # NOTE should coerce an int to a float if there are nans      
+                    dtype = None    # NOTE should coerce an int to a float if there are nans
                 df_data[col] = pd.Series(col_data[col], dtype=dtype)
             except KeyError as err:
                 l.warning('Creating df without non-required field {}'.format(col))

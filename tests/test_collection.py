@@ -91,7 +91,7 @@ class TestBaseSerializer(unittest.TestCase):
         s = DateStringFormatTestSerializer(internal=InternalObject, strict=True)
         test = {'b': '%Y-%m-%d %H:%M:%S', 'c': '%Y-%m-%d'}
         self.assertDictEqual(test, s.dateformat_fields)
-    
+
 
 
 class TestBaseCollection(unittest.TestCase):
@@ -136,6 +136,12 @@ class TestBaseCollection(unittest.TestCase):
             {'id': 2, 'name': None, 'number': 41.666, 'date': '2016-05-04', 'datet': None, 'tf':False, 'some_list':[4,5,6]},
             {'id': 3, 'name': 'pup', 'number': None, 'date': '2015-05-04', 'datet': '2015-05-04 10:30:24', 'tf':True, 'some_list':[7,8,9]},
 
+        ]
+
+        self.dtyp_test_data_all_none = [
+            {'id': None, 'name': None, 'number': None, 'date': None, 'datet': '2017-05-04 10:30:24', 'tf':True, 'some_list':None},
+            {'id': None, 'name': None, 'number': None, 'date': None, 'datet': None, 'tf':False, 'some_list':[4,5,6]},
+            {'id': None, 'name': None, 'number': None, 'date': None, 'datet': '2015-05-04 10:30:24', 'tf':True, 'some_list':[7,8,9]},
         ]
 
 
@@ -319,9 +325,9 @@ class TestBaseCollection(unittest.TestCase):
 
     def test_non_required_datetimes_not_present_do_not_raise_utils_key_error(self):
 
-        # if a date field was not required and not provided a KeyError was being raised 
-        # in RecordUtils. We swallow that error and only parse datefields that are in the 
-        # loaded data 
+        # if a date field was not required and not provided a KeyError was being raised
+        # in RecordUtils. We swallow that error and only parse datefields that are in the
+        # loaded data
 
         BaseCollection.serializer_class = DateStringFormatTestSerializer
 
@@ -341,10 +347,10 @@ class TestBaseCollection(unittest.TestCase):
         ]
 
         self.assertListEqual(test, b.data)
-    
+
     def test_non_required_fields_not_present_do_not_raise_key_error_in_to_dataframe(self):
 
-        BaseCollection.serializer_class = InternalSerializer  # these fields are not required  
+        BaseCollection.serializer_class = InternalSerializer  # these fields are not required
 
         records = [{'bdbid': 1}, {'bdbid': 2}]
 
@@ -352,7 +358,7 @@ class TestBaseCollection(unittest.TestCase):
         b.load_data(records)
 
         df = b.to_dataframe()
-        
+
         self.assertEqual(records, df.to_dict('records'))
 
 
@@ -361,7 +367,7 @@ class TestBaseCollection(unittest.TestCase):
         class TestIntSerializer(BaseSerializer):
             test_id = fields.Integer(allow_none=True)
 
-        BaseCollection.serializer_class = TestIntSerializer  # these fields are not required  
+        BaseCollection.serializer_class = TestIntSerializer  # these fields are not required
 
         records = [{'test_id': None}, {'test_id': 2}]
         #expected_result = [{'test_id': np.nan}, {'test_id': 2.0}]
@@ -369,16 +375,16 @@ class TestBaseCollection(unittest.TestCase):
         b.load_data(records)
         df = b.to_dataframe()
         check = df.to_dict('records')
-        
-        self.assertTrue(np.isnan(check[0]['test_id'])) #NOTE coerced to nan and float 
+
+        self.assertTrue(np.isnan(check[0]['test_id'])) #NOTE coerced to nan and float
         self.assertEqual(check[1]['test_id'], 2.0)
 
-    
+
     def test_non_required_date_fields_do_not_raiseTypeError_in_to_dataframe(self):
         class TestDateSerializer(BaseSerializer):
             test_date = fields.Date('%Y-%m-%d',  allow_none=True)
 
-        BaseCollection.serializer_class = TestDateSerializer  # these fields are not required  
+        BaseCollection.serializer_class = TestDateSerializer  # these fields are not required
 
         records = [{'test_date': None}, {'test_date': '2017-07-01'}]
         b = BaseCollection()
@@ -391,7 +397,7 @@ class TestBaseCollection(unittest.TestCase):
 
     def test_empty_collection_returns_empty_dataframe_in_to_dataframe(self):
 
-        BaseCollection.serializer_class = InternalSerializer 
+        BaseCollection.serializer_class = InternalSerializer
         records = []
 
         b = BaseCollection()
@@ -405,9 +411,19 @@ class TestBaseCollection(unittest.TestCase):
 
     def test_empty_collection_raises_CollectionLoadError_if_passed_empty_record_collection(self):
 
-        BaseCollection.serializer_class = InternalSerializer 
+        BaseCollection.serializer_class = InternalSerializer
         records = []
 
         b = BaseCollection()
         with self.assertRaises(CollectionLoadError):
             b.load_data(records, raise_on_empty=True)
+
+
+    def test_None_to_nan_conversion_all_none(self):
+        BaseCollection.serializer_class = InternalDtypeTestSerializer
+
+        b = BaseCollection()
+        b.load_data(self.dtyp_test_data_all_none)
+        df = b.to_dataframe() # would raise here
+        self.assertIsInstance(df, pd.DataFrame)
+

@@ -31,6 +31,7 @@ History
 0.3.0 (2019-07-14)
 ------------------
 Fixes some long standing issues and adds some new features.
+
 * adapter.py - kwarg to accumulate optionally accumulate intermediate collections in adapter chain
 * registry.py - A user warning is issued instead of exception if an identical class path name is overwritten
 * collection.py - fixed errors related to creating dataframes from NoneType

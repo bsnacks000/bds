@@ -8,7 +8,7 @@ from binx.collection import BaseCollection, BaseSerializer, CollectionBuilder
 from binx.adapter import AdapterOutputContainer, AbstractAdapter, register_adapter
 from marshmallow import fields
 
-import binx
+import binx.collection
 from binx.registry import _make_cc_graph, adapter_path
 from binx.utils import bfs_shortest_path
 

@@ -4,6 +4,9 @@
 import abc
 import pandas as pd
 import numpy as np
+import copy
+import uuid
+
 from marshmallow import Schema, post_load, fields
 from marshmallow.exceptions import ValidationError
 
@@ -17,7 +20,6 @@ l = logging.getLogger(__name__)
 
 
 # a place for the registry of internals after they are constructed
-
 
 class InternalObject(object):
     """ a namespace class for instance checking for an internally used model object
@@ -178,7 +180,7 @@ class BaseCollection(AbstractCollection):
     def __init__(self):
         self._data = []
         self._serializer = self.serializer_class(internal=self.__class__.internal_class, strict=True)
-
+        self.__collection_id = uuid.uuid4().hex
 
     @classmethod
     def get_fully_qualified_class_path(cls):
@@ -214,6 +216,10 @@ class BaseCollection(AbstractCollection):
         """
         return self.__class__.internal_class
 
+    @property
+    def collection_id(self):
+        return self.__collection_id
+
 
     def __iter__(self):
         self._idx = 0
@@ -245,7 +251,7 @@ class BaseCollection(AbstractCollection):
             raise TypeError('Only Collections of the same class can be concatenated')
 
     @classmethod
-    def _resolve_adapter_chain(cls, input_collection, **adapter_context):
+    def _resolve_adapter_chain(cls, input_collection, accumulate, **adapter_context):
         """ attempts to resolve the adapter chain using the current class as the target and
         input as the starting class. The adapter context accumulates over each call and ensures that
         kwargs needed for certain adapter calls are guaranteed to make it to the correct adapter.
@@ -261,14 +267,18 @@ class BaseCollection(AbstractCollection):
         current_input = input_collection  # NOTE this is an instance with data to be transformed.. not a class
         adapter_output = None
 
-        for adapter_class in adapters:
-            #NOTE custom error handling must be added here
+        for i, adapter_class in enumerate(adapters):
+            # if accumulate make a new key in the current context for the current collection the collection name in the registry
+            if accumulate and i > 0:
+                coll_id = current_input.__class__.__name__
+                current_context[coll_id] = copy.copy(current_input)
+
             current_adapter = adapter_class() # for each adapter class we push the input_collection and a context
             adapter_output = current_adapter(current_input, **current_context) # adapt data to the next type of collection
             current_context = {**current_context, **adapter_output.context} # NOTE this is will fail on py3.4
             current_input = adapter_output.collection
 
-        adapter_output._context = current_context
+        adapter_output._context = current_context # set final context
         return adapter_output
 
     def _dataframe_with_dtypes(self, data):
@@ -276,17 +286,23 @@ class BaseCollection(AbstractCollection):
         """
         rutil = RecordUtils()
         dfutil = DataFrameDtypeConversion()
-        col_data = rutil.records_to_columns(data)
+        try:
+            col_data = rutil.records_to_columns(data)
+        except IndexError:
+            return pd.DataFrame()
+
         dtype_map = self.serializer.get_numpy_fields()
 
         # iterate columns and construct a dictionary of pd.Series with correct-dtype
         df_data = {} # a dictionary of pd.Series with dtypes keyed by col names
         for col, dtype in dtype_map.items():
             try:
+                if dtype == np.dtype('int') and any([c is None for c in col_data[col]]):
+                    dtype = None    # NOTE should coerce an int to a float if there are nans
                 df_data[col] = pd.Series(col_data[col], dtype=dtype)
             except KeyError as err:
                 l.warning('Creating df without non-required field {}'.format(col))
-                pass 
+                pass
 
         df = pd.DataFrame(df_data)
         df = dfutil.df_none_to_nan(df)
@@ -309,21 +325,21 @@ class BaseCollection(AbstractCollection):
 
     def _clean_records(self, records):
         formatfields = self.serializer.dateformat_fields
-
         util = RecordUtils()
-        #TODO should check nans here but need a faster algo
-
         if len(formatfields) > 0:
             records = util.date_to_string(formatfields, records)
 
         return records
 
 
-    def load_data(self, records):
+    def load_data(self, records, raise_on_empty=False):
         """default implementation. Defaults to handling lists of python-dicts (records).
         #TODO -- create a drop_duplicates option and use pandas to drop the dupes
         """
         try:
+            if raise_on_empty and len(records) == 0:
+                raise ValueError('An empty set of records was passed to load_data')
+
             if isinstance(records, pd.DataFrame):
                 records = self._clean_dataframe(records)
             else:
@@ -347,7 +363,7 @@ class BaseCollection(AbstractCollection):
 
 
     @classmethod
-    def adapt(cls, input_collection, **adapter_context):
+    def adapt(cls, input_collection, accumulate=False, **adapter_context):
         """ Attempts to adapt the input collection instance into a collection of this type by
         resolving the adapter chain for the input collection. Any kwargs passed in are handed over to the resolver.
         colla = CollectionA()
@@ -357,10 +373,13 @@ class BaseCollection(AbstractCollection):
 
         This method returns a new instance of the adapted class (the caller)
         """
+
         if not issubclass(input_collection.__class__, BaseCollection): #check if its a Collection or raise TypeError
             raise TypeError('The input to adapt must be a Collection')
+
         try:
-            adapted = cls._resolve_adapter_chain(input_collection, **adapter_context) # attempt to resolve the adapter chain
+            adapted = cls._resolve_adapter_chain(input_collection, accumulate, **adapter_context) # attempt to resolve the adapter chain
+
         except Exception as err:
             raise AdapterChainError('An error occured within the adapter chain') from err
 
@@ -400,9 +419,12 @@ class AbstractCollectionBuilder(abc.ABC):
 
 
 class CollectionBuilder(AbstractCollectionBuilder):
+    """ A factory class that contructs Collection objects dynamically, providing a default
+    namespace for binx.registry and the adapter chain.
+    """
 
-    def __init__(self, name, unique_fields=None):
-        self.name = name
+    def __init__(self, name=None, unique_fields=None):
+        self.name = name  # NOTE in v0.3.0 the name can be optionally set in the build. Left in for backwards compatibility
         self.unique_fields = None   #NOTE placeholder... future builds will be able to declare unique constraints here
 
 
@@ -452,15 +474,30 @@ class CollectionBuilder(AbstractCollectionBuilder):
         return klass
 
 
-    def build(self, serializer_class, internal_only=False):
+    def _get_name_from_serializer_class(self, serializer_class):
+        """ helper that parses the serializer_class for a name to use when constructing the collection
+        This automatically looks for 'Serializer' and 'Schema' on the class name and deletes them, leaving
+        a the "root" name that will be given to the dynamically created objects.
+        """
+        return serializer_class.__name__.replace('Serializer', '').replace('Schema', '')
+
+
+    def build(self, serializer_class, name=None, internal_only=False):
         """ dynamically creates and returns a Collection class given a serializer
         and identifier. If internal_only is set to True then this will only return the internal.
         This is useful if you are using a declarative approach to defining the collections and want to
         add or override some of the base behavior
 
         """
+        # name detection. Check init for a string, then check build kwarg. If either is None then
+        # derive the name from the serializer_class.
+        if self.name:  #
+            name = self.name
 
-        coll_name, internal_name = self._parse_names(self.name) # create the col name
+        if name is None:
+            name = self._get_name_from_serializer_class(serializer_class)
+
+        coll_name, internal_name = self._parse_names(name) # create the col name
         internal_class = self._build_internal(internal_name, serializer_class) # create the internal class
 
         if internal_only:

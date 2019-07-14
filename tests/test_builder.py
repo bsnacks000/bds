@@ -30,6 +30,7 @@ class TestInternal(InternalObject):
         self.z = z
 
 
+
 class TestCollectionBuilder(unittest.TestCase):
 
     def setUp(self):
@@ -101,3 +102,39 @@ class TestCollectionBuilder(unittest.TestCase):
         InternalOutput = self.coll_builder.build(TestAgainAgainSerializer, internal_only=True)
 
         self.assertIsInstance(InternalOutput(), InternalObject)
+
+
+    def test_module_name_resolution_using_builder(self):
+        # relates to issue 19 -- will always point to
+
+        class TestModuleNameSerializer(BaseSerializer):
+            x = fields.Integer()
+            y = fields.Integer()
+            z = fields.Str()
+
+        self.coll_builder.name = 'TestModuleName'
+        TestModuleNameCollection = self.coll_builder.build(TestModuleNameSerializer)
+
+        t = TestModuleNameCollection.get_fully_qualified_class_path()
+        self.assertEqual(t, 'binx.collection.TestModuleNameCollection')
+
+
+    def test_build_dynamically_adds_name_via_build_method(self):
+
+        class TestAutoNameSerializer(BaseSerializer):
+            x = fields.Integer()
+            y = fields.Integer()
+            z = fields.Str()
+
+        class TestOtherAutoNameSchema(BaseSerializer):
+            x = fields.Integer()
+            y = fields.Integer()
+            z = fields.Str()
+
+        builder = CollectionBuilder()
+        AliasOne = builder.build(TestAutoNameSerializer)
+        self.assertEqual(AliasOne.__name__, 'TestAutoNameCollection')
+
+        AliasTwo = builder.build(TestOtherAutoNameSchema)
+        self.assertEqual(AliasTwo.__name__, 'TestOtherAutoNameCollection')
+

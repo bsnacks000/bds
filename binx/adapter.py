@@ -8,7 +8,10 @@ Once the class is declared the user register's the adapter using the register st
 """
 import abc
 from .registry import register_adapter_to_collection, register_adaptable_collection
+from .exceptions import AdapterFunctionError
 
+import copy
+import inspect
 
 def check_adapter_call(method):
     """ a helper decorater for the __call__ method that does some type checking
@@ -28,11 +31,15 @@ def check_adapter_call(method):
     return inner
 
 
+
 class AdapterOutputContainer(object):
     """ A generic container class for moving data out of adapters. It holds the target output
     collection along with any context data that might need to be passed on to the caller or
     another adapter. Essentially 'side effects' from the adaptation that might be needed further along
-    in the adapter chain
+    in the adapter chain.
+
+    NOTE that the context in a container instance only relates to its immediate adapter call. It
+    does contain any of the surrounding context. This gets accumulated in BaseCollection._resolve_adapter_chain
 
     This is used internally in Adapter.__call__
     """
@@ -76,8 +83,8 @@ class AbstractAdapter(abc.ABC):
         """
         # get the data from the input_collection  (collection.data or collection.to_dataframe() or whatever...)
         # get the context args you need... context.pop('some-key') or context['some-key']
-        
-        #return self.render_return(collection, **context) #NOTE this is an example of how to return from adapt
+
+        #return self.render_return(data, **context) #NOTE this is an example of how to return from adapt
 
 
 
@@ -89,6 +96,41 @@ class AbstractAdapter(abc.ABC):
         """
         return self.adapt(collection, **context)
 
+
+
+
+class PluggableAdapter(AbstractAdapter):
+    """ creates a pluggable interface for Adapters. A user should subclass this class and provide a calc
+    object that
+    """
+    calc = None
+
+    def __init__(self):
+        self._check_calc(self.__class__.calc) # perform this check once on init
+
+    def _check_calc(self, calc):
+        """ some checking logic that happens on init"""
+        assert calc is not None, 'A callable must be set on the calc field'
+
+        if not callable(calc):
+            raise TypeError('calc field must be callable')
+
+        sig = inspect.signature(calc).parameters
+        assert sorted(list(sig.keys())) == ['collection', 'context'], 'Incorrect signature provided to Adapter.calc. Must have signature "collection", "**context"'
+        assert sig['context'].kind == inspect.Parameter.VAR_KEYWORD, '"context" must be kwargs variable (**context)'
+        return True
+
+    def adapt(self, collection, **context):
+        """Calls the adaptation function set on the calc field.
+        """
+        try:
+            data, context = self.__class__.calc(collection, **context)
+        except ValueError: # we enforce returning a two-tuple
+            raise AdapterFunctionError('Return type of PluggableAdapter.calc must be a 2-tuple of data and context dict')
+        if not isinstance(context, dict):
+            raise AdapterFunctionError('The second return value of PluggableAdapter.calc must be a dictionary')
+
+        return self.render_return(data, **context)
 
 
 def register_adapter(adapter_class):

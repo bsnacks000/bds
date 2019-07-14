@@ -21,7 +21,7 @@ setup(
     author="bsnacks000",
     author_email='bsnacks000@gmail.com',
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
@@ -41,6 +41,6 @@ setup(
     test_suite='nose.collector',
     tests_require=test_requirements,
     url='https://github.com/bsnacks000/binx',
-    version='0.2.3',
+    version='0.3.0',
     zip_safe=False,
 )

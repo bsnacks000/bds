@@ -8,8 +8,8 @@ Installation
 Stable release
 --------------
 
-To install binx, run this command in your terminal:
+binx is on pypi and can be installed using pip.
 
 .. code-block:: console
 
-    $ pip install --index-url https://test.pypi.org/simple/ binx
+    $ pip install binx

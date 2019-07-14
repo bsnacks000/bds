@@ -6,8 +6,8 @@ binx
 .. image:: https://img.shields.io/pypi/v/binx.svg
         :target: https://pypi.python.org/pypi/binx
 
-.. image:: https://img.shields.io/travis/bsnacks000/binx.svg
-        :target: https://travis-ci.org/bsnacks000/binx
+.. image:: https://circleci.com/gh/bsnacks000/binx.svg?style=svg
+        :target: https://circleci.com/gh/bsnacks000/binx
 
 .. image:: https://readthedocs.org/projects/binx/badge/?version=latest
         :target: https://binx.readthedocs.io/en/latest/?badge=latest

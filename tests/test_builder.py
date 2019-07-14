@@ -118,3 +118,23 @@ class TestCollectionBuilder(unittest.TestCase):
         t = TestModuleNameCollection.get_fully_qualified_class_path()
         self.assertEqual(t, 'binx.collection.TestModuleNameCollection')
 
+
+    def test_build_dynamically_adds_name_via_build_method(self):
+
+        class TestAutoNameSerializer(BaseSerializer):
+            x = fields.Integer()
+            y = fields.Integer()
+            z = fields.Str()
+
+        class TestOtherAutoNameSchema(BaseSerializer):
+            x = fields.Integer()
+            y = fields.Integer()
+            z = fields.Str()
+
+        builder = CollectionBuilder()
+        AliasOne = builder.build(TestAutoNameSerializer)
+        self.assertEqual(AliasOne.__name__, 'TestAutoNameCollection')
+
+        AliasTwo = builder.build(TestOtherAutoNameSchema)
+        self.assertEqual(AliasTwo.__name__, 'TestOtherAutoNameCollection')
+

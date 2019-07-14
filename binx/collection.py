@@ -419,9 +419,12 @@ class AbstractCollectionBuilder(abc.ABC):
 
 
 class CollectionBuilder(AbstractCollectionBuilder):
+    """ A factory class that contructs Collection objects dynamically, providing a default
+    namespace for binx.registry and the adapter chain.
+    """
 
-    def __init__(self, name, unique_fields=None):
-        self.name = name
+    def __init__(self, name=None, unique_fields=None):
+        self.name = name  # NOTE in v0.3.0 the name can be optionally set in the build. Left in for backwards compatibility
         self.unique_fields = None   #NOTE placeholder... future builds will be able to declare unique constraints here
 
 
@@ -471,15 +474,30 @@ class CollectionBuilder(AbstractCollectionBuilder):
         return klass
 
 
-    def build(self, serializer_class, internal_only=False):
+    def _get_name_from_serializer_class(self, serializer_class):
+        """ helper that parses the serializer_class for a name to use when constructing the collection
+        This automatically looks for 'Serializer' and 'Schema' on the class name and deletes them, leaving
+        a the "root" name that will be given to the dynamically created objects.
+        """
+        return serializer_class.__name__.replace('Serializer', '').replace('Schema', '')
+
+
+    def build(self, serializer_class, name=None, internal_only=False):
         """ dynamically creates and returns a Collection class given a serializer
         and identifier. If internal_only is set to True then this will only return the internal.
         This is useful if you are using a declarative approach to defining the collections and want to
         add or override some of the base behavior
 
         """
+        # name detection. Check init for a string, then check build kwarg. If either is None then
+        # derive the name from the serializer_class.
+        if self.name:  #
+            name = self.name
 
-        coll_name, internal_name = self._parse_names(self.name) # create the col name
+        if name is None:
+            name = self._get_name_from_serializer_class(serializer_class)
+
+        coll_name, internal_name = self._parse_names(name) # create the col name
         internal_class = self._build_internal(internal_name, serializer_class) # create the internal class
 
         if internal_only:

@@ -8,6 +8,7 @@ Once the class is declared the user register's the adapter using the register st
 """
 import abc
 from .registry import register_adapter_to_collection, register_adaptable_collection
+from .exceptions import AdapterFunctionError
 
 import copy
 import inspect
@@ -28,6 +29,7 @@ def check_adapter_call(method):
 
         return result
     return inner
+
 
 
 class AdapterOutputContainer(object):
@@ -95,6 +97,8 @@ class AbstractAdapter(abc.ABC):
         return self.adapt(collection, **context)
 
 
+
+
 class PluggableAdapter(AbstractAdapter):
     """ creates a pluggable interface for Adapters. A user should subclass this class and provide a calc
     object that
@@ -106,22 +110,27 @@ class PluggableAdapter(AbstractAdapter):
 
     def _check_calc(self, calc):
         """ some checking logic that happens on init"""
-        sig = inspect.signature(calc)
+        assert calc is not None, 'A callable must be set on the calc field'
+
         if not callable(calc):
             raise TypeError('calc field must be callable')
+
+        sig = inspect.signature(calc).parameters
         assert sorted(list(sig.keys())) == ['collection', 'context'], 'Incorrect signature provided to Adapter.calc. Must have signature "collection", "**context"'
         assert sig['context'].kind == inspect.Parameter.VAR_KEYWORD, '"context" must be kwargs variable (**context)'
-
+        return True
 
     def adapt(self, collection, **context):
-        """ Inspects the calc field on the class and calls the method. If no side effects were passed
+        """Calls the adaptation function set on the calc field.
         """
-        data = self.__class__.calc(collection, **context)
         try:
-            iter(data)  # if no context delivered then this will fail and we return just data
-        except TypeError as err:
-            return self.render_return(data)
-        return self.render_return(data[0], **data[1])
+            data, context = self.__class__.calc(collection, **context)
+        except ValueError: # we enforce returning a two-tuple
+            raise AdapterFunctionError('Return type of PluggableAdapter.calc must be a 2-tuple of data and context dict')
+        if not isinstance(context, dict):
+            raise AdapterFunctionError('The second return value of PluggableAdapter.calc must be a dictionary')
+
+        return self.render_return(data, **context)
 
 
 def register_adapter(adapter_class):

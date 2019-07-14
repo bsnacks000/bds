@@ -325,10 +325,7 @@ class BaseCollection(AbstractCollection):
 
     def _clean_records(self, records):
         formatfields = self.serializer.dateformat_fields
-
         util = RecordUtils()
-        #TODO should check nans here but need a faster algo
-
         if len(formatfields) > 0:
             records = util.date_to_string(formatfields, records)
 

@@ -10,6 +10,7 @@ import abc
 from .registry import register_adapter_to_collection, register_adaptable_collection
 
 import copy
+import inspect
 
 def check_adapter_call(method):
     """ a helper decorater for the __call__ method that does some type checking
@@ -81,7 +82,7 @@ class AbstractAdapter(abc.ABC):
         # get the data from the input_collection  (collection.data or collection.to_dataframe() or whatever...)
         # get the context args you need... context.pop('some-key') or context['some-key']
 
-        #return self.render_return(collection, **context) #NOTE this is an example of how to return from adapt
+        #return self.render_return(data, **context) #NOTE this is an example of how to return from adapt
 
 
 
@@ -93,6 +94,34 @@ class AbstractAdapter(abc.ABC):
         """
         return self.adapt(collection, **context)
 
+
+class PluggableAdapter(AbstractAdapter):
+    """ creates a pluggable interface for Adapters. A user should subclass this class and provide a calc
+    object that
+    """
+    calc = None
+
+    def __init__(self):
+        self._check_calc(self.__class__.calc) # perform this check once on init
+
+    def _check_calc(self, calc):
+        """ some checking logic that happens on init"""
+        sig = inspect.signature(calc)
+        if not callable(calc):
+            raise TypeError('calc field must be callable')
+        assert sorted(list(sig.keys())) == ['collection', 'context'], 'Incorrect signature provided to Adapter.calc. Must have signature "collection", "**context"'
+        assert sig['context'].kind == inspect.Parameter.VAR_KEYWORD, '"context" must be kwargs variable (**context)'
+
+
+    def adapt(self, collection, **context):
+        """ Inspects the calc field on the class and calls the method. If no side effects were passed
+        """
+        data = self.__class__.calc(collection, **context)
+        try:
+            iter(data)  # if no context delivered then this will fail and we return just data
+        except TypeError as err:
+            return self.render_return(data)
+        return self.render_return(data[0], **data[1])
 
 
 def register_adapter(adapter_class):

@@ -8,6 +8,7 @@ from binx.collection import BaseCollection, BaseSerializer, CollectionBuilder
 from binx.adapter import AdapterOutputContainer, AbstractAdapter, register_adapter
 from marshmallow import fields
 
+import binx
 from binx.registry import _make_cc_graph, adapter_path
 from binx.utils import bfs_shortest_path
 
@@ -219,3 +220,58 @@ class TestAdapterCollectionIntegration(unittest.TestCase):
 
         self.assertEqual(test_data, test_c_coll.data)
         self.assertEqual(test_context, context)
+
+
+    def test_accumulate_true_for_c_adapts_a(self):
+
+        test_a_coll = self.TestAACollection()
+        test_a_coll.load_data([{'a': 41}])
+
+        test_c_coll, context = self.TestCCCollection.adapt(test_a_coll, accumulate=True, foo='bar')
+        #print(test_c_coll.data, context)
+        test_data = [{'c': 43, 'b': 42, 'a': 41}]
+        test_context = {'foo': 'bar', 'something_else': 'mups', 'other_context_var': 'tup', 'context_var': 'hep', 'some_thing': 'zups'}
+
+        self.assertEqual(test_data, test_c_coll.data)
+        self.assertIn('TestBBCollection', context)  # check that we have the intermediate collection in the final context
+        self.assertIsInstance(context['TestBBCollection'], binx.collection.Collection)
+        for k,v in context:
+            if k != 'TestBBCollection':
+                self.assertEqual(test_context[k], context[k])
+
+
+class TestPluggableAdapter(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        pass
+
+
+    def setUp(self):
+        pass
+
+
+    def test_pluggable_adapter_check_calc(self):
+        self.fail('todo')
+
+
+    def test_pluggable_adapter_creates_expected_result(self):
+        self.fail('todo')
+
+
+    def test_pluggable_adapter_works_with_returned_context(self):
+        self.fail('todo')
+
+
+    def test_pluggable_adapter_works_without_returned_context(self):
+        self.fail('todo')
+
+
+
+class TestPluggableAdapterIntegration(unittest.TestCase):
+
+    def test_pluggable_adapter_works_with_longer_adapter_chain(self):
+        self.fail('todo')
+
+
+

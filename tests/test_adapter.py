@@ -14,7 +14,7 @@ from binx.utils import bfs_shortest_path
 
 from pprint import pprint
 
-from binx.exceptions import AdapterFunctionError
+from binx.exceptions import AdapterFunctionError, AdapterChainError
 
 class TestASerializer(BaseSerializer):
     a = fields.Integer()
@@ -241,7 +241,7 @@ class TestAdapterCollectionIntegration(unittest.TestCase):
             if k != 'TestBBCollection':
                 self.assertEqual(test_context[k], context[k])
 
-
+ 
 class TestPluggableAdapter(unittest.TestCase):
 
     # NOTE includes integration tests with collections
@@ -392,8 +392,29 @@ class TestPluggableAdapter(unittest.TestCase):
             adapter.adapt(test_a_coll)
 
         self.PluggableBToCAdapter.calc = adapt_b_to_c
+   
+       
+    def test_AdapterChainError_contains_context(self):
 
+        self.PluggableBToCAdapter.calc = adapt_b_to_c_raise_exception 
 
+        test_a_coll = self.TestPluggableACollection()
+        test_a_coll.load_data([{'a': 41}])
+
+        err_context = None
+        try:
+            test_c_coll, context = self.TestPluggableCCollection.adapt(test_a_coll, accumulate=True, foo='bar')
+        except AdapterChainError as err:
+            err_context = err.context  
+
+        context_var_keys = ['foo', 'context_var', 'other_context_var', 'TestPluggableBCollection']
+        self.assertIsInstance(err_context, dict)
+
+        for k in err_context.keys():
+            assert k in err_context
+
+        self.PluggableBToCAdapter.calc = adapt_b_to_c
+        
 
 # for testing pluggable adapter
 def adapt_a_to_b(collection, **context):
@@ -418,3 +439,7 @@ def adapt_b_to_c_context_bad(collection, **context):
     df['c'] = 43  # add a column c with some dataframe here
     return df, 'blah'
 
+
+
+def adapt_b_to_c_raise_exception(collection, **context):
+    raise Exception('boo')

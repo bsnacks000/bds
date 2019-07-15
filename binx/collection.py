@@ -261,25 +261,32 @@ class BaseCollection(AbstractCollection):
         """
         adapters = adapter_path(input_collection.__class__, cls)
         if len(adapters) == 0:  # return an empty list if no adapters can be found
-            return
+            return    
+        try:
 
-        current_context = adapter_context  # set starting point... these are instances and will be modified below
-        current_input = input_collection  # NOTE this is an instance with data to be transformed.. not a class
-        adapter_output = None
+            current_context = adapter_context  # set starting point... these are instances and will be modified below
+            current_input = input_collection  # NOTE this is an instance with data to be transformed.. not a class
+            adapter_output = None
 
-        for i, adapter_class in enumerate(adapters):
-            # if accumulate make a new key in the current context for the current collection the collection name in the registry
-            if accumulate and i > 0:
-                coll_id = current_input.__class__.__name__
-                current_context[coll_id] = copy.copy(current_input)
+            for i, adapter_class in enumerate(adapters):
+                # if accumulate make a new key in the current context for the current collection the collection name in the registry
+                if accumulate and i > 0:
+                    coll_id = current_input.__class__.__name__
+                    current_context[coll_id] = copy.copy(current_input)
 
-            current_adapter = adapter_class() # for each adapter class we push the input_collection and a context
-            adapter_output = current_adapter(current_input, **current_context) # adapt data to the next type of collection
-            current_context = {**current_context, **adapter_output.context} # NOTE this is will fail on py3.4
-            current_input = adapter_output.collection
+                current_adapter = adapter_class() # for each adapter class we push the input_collection and a context
+                adapter_output = current_adapter(current_input, **current_context) # adapt data to the next type of collection
+                current_context = {**current_context, **adapter_output.context} # NOTE this is will fail on py3.4
+                current_input = adapter_output.collection
+        
+        except Exception as err:
+            e = AdapterChainError('An error occurred within the adapter chain')
+            e.context = current_context
+            raise e from err
 
         adapter_output._context = current_context # set final context
         return adapter_output
+
 
     def _dataframe_with_dtypes(self, data):
         """ converts records to column format
@@ -377,11 +384,7 @@ class BaseCollection(AbstractCollection):
         if not issubclass(input_collection.__class__, BaseCollection): #check if its a Collection or raise TypeError
             raise TypeError('The input to adapt must be a Collection')
 
-        try:
-            adapted = cls._resolve_adapter_chain(input_collection, accumulate, **adapter_context) # attempt to resolve the adapter chain
-
-        except Exception as err:
-            raise AdapterChainError('An error occured within the adapter chain') from err
+        adapted = cls._resolve_adapter_chain(input_collection, accumulate, **adapter_context) # attempt to resolve the adapter chain
 
         if adapted is not None:
             return adapted.collection, adapted.context # on success we return the new collection and the accumulated context for reference

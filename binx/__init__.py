@@ -4,7 +4,7 @@
 
 __author__ = """bsnacks000"""
 __email__ = 'bsnacks000@gmail.com'
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 
 from .collection import BaseCollection, BaseSerializer, InternalObject
 

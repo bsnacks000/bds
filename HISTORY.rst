@@ -37,3 +37,7 @@ Fixes some long standing issues and adds some new features.
 * collection.py - fixed errors related to creating dataframes from NoneType
 * adapter.py - added a new base class PluggableAdapter to ease development of the adapter chain
 * collection.py - CollectionBuilder.build now excepts an optional name arg. Will attempt to auto-parse name from serializer_class.
+
+0.3.1 (2019-07-15)
+------------------
+* adds context variable to AdapterChainError that can be accessed if the error is caught

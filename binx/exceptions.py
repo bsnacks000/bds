@@ -40,7 +40,7 @@ class AdapterCollectionResultError(BinxError):
 class AdapterChainError(BinxError):
     """ thrown if a input collection cannot be found on the adapter chain for a Collection
     """
-
+        
 
 class AdapterFunctionError(BinxError, ValueError):
     """ thrown if a 2-tuple is not returned from a pluggable adapter function.

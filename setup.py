@@ -11,7 +11,7 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = ['future', 'pandas', 'marshmallow' ]
+requirements = ['pandas', 'marshmallow' ]
 
 setup_requirements = [ ]
 
@@ -28,6 +28,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7'
     ],
     description="Interfaces for an in-memory datastore and calc framework using marshmallow + pandas",
     install_requires=requirements,

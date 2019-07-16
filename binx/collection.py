@@ -33,12 +33,10 @@ class InternalObject(object):
     def __init__(self, *args, **kwargs):
         self.__dict__.update(kwargs)
 
-class BaseSerializer(Schema):
-    """The BaseSerializer overrides Schema to include a internal to dump associated InternalObjects.
-    These are instantiated with the serializer and used for loading and validating data.
-    It also provides a mapping of numpy dtypes to a select amount of marshmallow field name which helps optimize
-    memory in the to_dataframe object
-    """
+
+class BaseSerializerMixin(object):
+
+    internal_class = None 
 
     registered_colls = set()
 
@@ -57,18 +55,6 @@ class BaseSerializer(Schema):
     }
 
 
-    def __init__(self, *args, **kwargs):
-
-        if 'internal' in kwargs:
-            self._InternalClass = kwargs.pop('internal')
-        else:
-            raise InternalNotDefinedError('An InternalObject class must be instantiated with this Collection')
-
-        super(Schema, self).__init__(*args, **kwargs)
-
-        self.dateformat_fields = self._set_dateformat_fields()
-
-
     def _set_dateformat_fields(self):
         """ builds a mapping of date formatted column names to string formats for Collection.load_data
         """
@@ -84,13 +70,7 @@ class BaseSerializer(Schema):
                     dateformat_fields[col] = '%Y-%m-%d' # we set this as a default for datetime.date based objects
         return dateformat_fields
 
-
-    @post_load
-    def load_object(self, data):
-        """ loads and validates an internal class object """
-        return self._InternalClass(**data)
-
-
+    
     def get_numpy_fields(self):
         """ returns a dictionary of column names and numpy dtypes based on the ma_np_map dictionary.
         Collections will use this to create more mem-optimized dataframes
@@ -100,6 +80,82 @@ class BaseSerializer(Schema):
             ma_klass = self.__class__._declared_fields[field_name]
             out[field_name] = self.numpy_map.get(type(ma_klass)) or np.dtype('O')
         return out
+
+
+class BasicLoadObjectMixin(object):
+    @post_load
+    def load_object(self, data):
+        """ loads and validates an internal class object """
+        return self._internal_class(**data)
+
+
+class BaseSerializer(Schema, BaseSerializerMixin, BasicLoadObjectMixin):
+    """The BaseSerializer overrides Schema to include a internal to dump associated InternalObjects.
+    These are instantiated with the serializer and used for loading and validating data.
+    It also provides a mapping of numpy dtypes to a select amount of marshmallow field name which helps optimize
+    memory in the to_dataframe object
+    """
+
+    # registered_colls = set()
+
+    # numpy_map = {
+
+    #     fields.Integer: np.dtype('int'),
+    #     fields.Float: np.dtype('float'),
+    #     fields.Str: np.dtype('str'),
+    #     fields.Date: np.dtype('datetime64[ns]'),
+    #     fields.DateTime: np.dtype('datetime64[ns]'),
+    #     fields.List: np.dtype('O'),
+    #     fields.Bool: np.dtype('bool'),
+    #     fields.Dict: np.dtype('O'),
+    #     fields.Nested: np.dtype('O')
+
+    # }
+
+
+    # def __init__(self, *args, **kwargs):
+
+    #     if 'internal' in kwargs:
+    #         self._internal_class = kwargs.pop('internal')
+    #     else:
+    #         raise InternalNotDefinedError('An InternalObject class must be instantiated with this Collection')
+
+    #     super(Schema, self).__init__(*args, **kwargs)
+
+    #     self.dateformat_fields = self._set_dateformat_fields()
+
+
+    # def _set_dateformat_fields(self):
+    #     """ builds a mapping of date formatted column names to string formats for Collection.load_data
+    #     """
+    #     dateformat_fields = {}
+    #     for col,field in self.fields.items():
+    #         if isinstance(field, fields.DateTime):
+    #             if field.dateformat is not None:
+    #                 dateformat_fields[col] = field.dateformat
+    #         elif isinstance(field, fields.Date):
+    #             if hasattr(field, 'dateformat'):
+    #                 dateformat_fields[col] = field.dateformat
+    #             else:
+    #                 dateformat_fields[col] = '%Y-%m-%d' # we set this as a default for datetime.date based objects
+    #     return dateformat_fields
+
+
+    # @post_load
+    # def load_object(self, data):
+    #     """ loads and validates an internal class object """
+    #     return self._internal_class(**data)
+
+
+    # def get_numpy_fields(self):
+    #     """ returns a dictionary of column names and numpy dtypes based on the ma_np_map dictionary.
+    #     Collections will use this to create more mem-optimized dataframes
+    #     """
+    #     out = {}
+    #     for field_name in self._declared_fields.keys():
+    #         ma_klass = self.__class__._declared_fields[field_name]
+    #         out[field_name] = self.numpy_map.get(type(ma_klass)) or np.dtype('O')
+    #     return out
 
 
 class CollectionMeta(type):
@@ -173,13 +229,18 @@ class BaseCollection(AbstractCollection):
     def __new__(cls, *args, **kwargs):
         cls.serializer_class.registered_colls.add(cls)  #NOTE add a new subclass collection to the internal and internal class
         cls.internal_class.registered_colls.add(cls)
-        inst = super(BaseCollection, cls).__new__(cls, *args, **kwargs)
-        return inst
-
+        return super(BaseCollection, cls).__new__(cls, *args, **kwargs)
+        
 
     def __init__(self):
         self._data = []
-        self._serializer = self.serializer_class(internal=self.__class__.internal_class, strict=True)
+        self._serializer = self.serializer_class(strict=True)
+        if hasattr(self.serializer.opts, 'model'):  # override internal if we have a model attribute on object Meta
+            self.internal_class = self.serializer.opts.model
+
+        self._serializer._internal_class = self.internal_class
+        self._serializer.dateformat_fields = self._serializer._set_dateformat_fields()
+        
         self.__collection_id = uuid.uuid4().hex
 
     @classmethod

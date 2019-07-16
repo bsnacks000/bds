@@ -8,3 +8,6 @@ coverage
 Sphinx
 twine
 nose
+marshmallow-sqlalchemy 
+marshmallow-mongoengine
+jupyter

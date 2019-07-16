@@ -58,7 +58,7 @@ class TestBaseSerializer(unittest.TestCase):
 
     def test_internal_class_kwarg(self):
         s = InternalSerializer(internal=InternalObject, strict=True)
-        self.assertTrue(hasattr(s, '_InternalClass'))
+        self.assertTrue(hasattr(s, '_internal_class'))
 
 
     def test_internal_class_kwarg_raises_InternalNotDefinedError(self):

@@ -35,10 +35,9 @@ class InternalObject(object):
 class BaseSerializerMixin(object):
 
     internal_class = None  # The internal class associated with this collection
-
     registered_colls = set()  # A set of all the collection instances associated with this object.
 
-    numpy_map = {
+    numpy_map = {                    # a short map of common numpy
 
         fields.Integer: np.dtype('int'),
         fields.Float: np.dtype('float'),

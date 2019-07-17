@@ -19,8 +19,6 @@ l = logging.getLogger(__name__)
 
 
 
-# a place for the registry of internals after they are constructed
-
 class InternalObject(object):
     """ a namespace class for instance checking for an internally used model object
     It is otherwise a normal python object. _Internals are used as medium for
@@ -36,9 +34,9 @@ class InternalObject(object):
 
 class BaseSerializerMixin(object):
 
-    internal_class = None 
+    internal_class = None  # The internal class associated with this collection
 
-    registered_colls = set()
+    registered_colls = set()  # A set of all the collection instances associated with this object.
 
     numpy_map = {
 
@@ -70,7 +68,7 @@ class BaseSerializerMixin(object):
                     dateformat_fields[col] = '%Y-%m-%d' # we set this as a default for datetime.date based objects
         return dateformat_fields
 
-    
+
     def get_numpy_fields(self):
         """ returns a dictionary of column names and numpy dtypes based on the ma_np_map dictionary.
         Collections will use this to create more mem-optimized dataframes
@@ -227,20 +225,38 @@ class BaseCollection(AbstractCollection):
     internal_class = InternalObject
 
     def __new__(cls, *args, **kwargs):
-        cls.serializer_class.registered_colls.add(cls)  #NOTE add a new subclass collection to the internal and internal class
+
+        # XXX dynamic setup on the classes... if we load these attrs at runtime via monkey patch function
+        # though, maybe this is not neccessary
+
+        if not hasattr(cls.serializer_class, 'registered_colls'):
+            cls.serializer_class.registered_colls = {}
+
+        cls.serializer_class.registered_colls.add(cls)
+
+        if hasattr(cls.serializer_class.Meta, 'model'):
+            cls.internal_class = cls.serializer_class.Meta.model
+            if not hasattr(cls.internal_class, 'is_binx_internal'):
+                cls.internal_class.is_binx_internal = True  # intialize these fields.
+                cls.internal_class.registered_colls = {}
+
         cls.internal_class.registered_colls.add(cls)
+
         return super(BaseCollection, cls).__new__(cls, *args, **kwargs)
-        
 
-    def __init__(self):
-        self._data = []
+
+    def __init__(self, data=None):
+        if self.data:
+            self.load_data(data)
+        else:
+            self._data = []
+
+        # XXX v0.3.2 internal changes mean that we need to finish configuring the serializer here...
         self._serializer = self.serializer_class(strict=True)
-        if hasattr(self.serializer.opts, 'model'):  # override internal if we have a model attribute on object Meta
-            self.internal_class = self.serializer.opts.model
 
-        self._serializer._internal_class = self.internal_class
+        self._serializer._internal_class = self.internal_class # XXX moved from __init__ to here
         self._serializer.dateformat_fields = self._serializer._set_dateformat_fields()
-        
+
         self.__collection_id = uuid.uuid4().hex
 
     @classmethod
@@ -322,7 +338,7 @@ class BaseCollection(AbstractCollection):
         """
         adapters = adapter_path(input_collection.__class__, cls)
         if len(adapters) == 0:  # return an empty list if no adapters can be found
-            return    
+            return
         try:
 
             current_context = adapter_context  # set starting point... these are instances and will be modified below
@@ -339,7 +355,7 @@ class BaseCollection(AbstractCollection):
                 adapter_output = current_adapter(current_input, **current_context) # adapt data to the next type of collection
                 current_context = {**current_context, **adapter_output.context} # NOTE this is will fail on py3.4
                 current_input = adapter_output.collection
-        
+
         except Exception as err:
             e = AdapterChainError('An error occurred within the adapter chain')
             e.context = current_context

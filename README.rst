@@ -25,13 +25,6 @@ The main goal of the project is to provide a simple API for data scientists, eng
 to be able to organize their projects using a declarative style similar to how one might approach writing a web application using DRY principles.
 
 
-*NOTE* that starting with **v0.4.0** binx no longer supports marshmallow 2.x. If your project needs to be configured with marshmallow 2.x please install
-binx v0.3.2.
-
-.. code-block:: console
-
-    $ pip install binx
-
 ==^..^==
 
 * Free software: MIT license

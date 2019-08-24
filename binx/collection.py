@@ -261,7 +261,7 @@ class BaseCollection(AbstractCollection):
         """
         adapters = adapter_path(input_collection.__class__, cls)
         if len(adapters) == 0:  # return an empty list if no adapters can be found
-            return    
+            return
         try:
 
             current_context = adapter_context  # set starting point... these are instances and will be modified below
@@ -278,7 +278,7 @@ class BaseCollection(AbstractCollection):
                 adapter_output = current_adapter(current_input, **current_context) # adapt data to the next type of collection
                 current_context = {**current_context, **adapter_output.context} # NOTE this is will fail on py3.4
                 current_input = adapter_output.collection
-        
+
         except Exception as err:
             e = AdapterChainError('An error occurred within the adapter chain')
             e.context = current_context

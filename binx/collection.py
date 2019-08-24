@@ -168,20 +168,25 @@ class AbstractCollection(object, metaclass=AbstractCollectionMeta):
 class BaseCollection(AbstractCollection):
     """ Used to implement many of the default AbstractCollection methods
     Subclasses will mostly just need to define a custom Serializer and InternalObject pair
+
+    :param data: the data being passed into the serializer, could be a dataframe or list of records. If None
+
     """
     serializer_class = BaseSerializer   # must be overridden with a valid marshmallow schema and _Internal
     internal_class = InternalObject
 
     def __new__(cls, *args, **kwargs):
-        cls.serializer_class.registered_colls.add(cls)  #NOTE add a new subclass collection to the internal and internal class
+        cls.serializer_class.registered_colls.add(cls)  # register the cls here
         cls.internal_class.registered_colls.add(cls)
-        inst = super(BaseCollection, cls).__new__(cls, *args, **kwargs)
+        inst = super(BaseCollection, cls).__new__(cls)  # changed here 0.4 to allow args to be passed into __init__
         return inst
 
 
-    def __init__(self):
+    def __init__(self, data=None, **ma_kwargs):
         self._data = []
-        self._serializer = self.serializer_class(internal=self.__class__.internal_class)
+        self._serializer = self.serializer_class(internal=self.__class__.internal_class, **ma_kwargs)
+        if data is not None:
+            self.load_data(data)
         self.__collection_id = uuid.uuid4().hex
 
     @classmethod
@@ -209,8 +214,8 @@ class BaseCollection(AbstractCollection):
         """
         if len(self._data) == 0:
             return self._data
-        return self.serializer.dump(self._data, many=True) # NOTE returns MarshalResult object
-        #return marshal_result.data  # NOTE differs from 3.0.0 -- only returns records here
+        return self.serializer.dump(self._data, many=True) # changed to update ma v3
+
 
     @property
     def internal(self):

@@ -102,6 +102,10 @@ class TestBaseSerializer(unittest.TestCase):
 
 
 
+    def test_write_more_tests_for_marshmallow3_before_release(self):
+        self.fail('reminder')
+
+
 class TestBaseCollection(unittest.TestCase):
 
     def setUp(self):

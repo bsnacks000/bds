@@ -13,7 +13,7 @@ binx
         :target: https://binx.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
-:version: 0.3.1
+:version: 0.3.2
 
 ``binx`` is a small Python framework for application data modeling and transformation. It's API relies heavily on `marshmallow
 <https://marshmallow.readthedocs.io/en/3.0/>`_ for validation, object serialization and storage. It's true purpose however is to expose an API that

@@ -75,14 +75,15 @@ class BaseSerializer(Schema):
         #XXX this is breaking in 3.0... need to look at Meta object. field level attrs for Date not supported
         dateformat_fields = {}
         for col,field in self.fields.items():
-            if isinstance(field, fields.DateTime):
-                if field.dateformat is not None:
-                    dateformat_fields[col] = field.dateformat
-            elif isinstance(field, fields.Date):
-                if hasattr(field, 'dateformat'):
-                    dateformat_fields[col] = field.dateformat
+            if isinstance(field, fields.Date):
+                if self.opts.dateformat is not None:
+                    dateformat_fields[col] = self.opts.dateformat
                 else:
                     dateformat_fields[col] = '%Y-%m-%d' # we set this as a default for datetime.date based objects
+            elif isinstance(field, fields.DateTime):
+                if self.opts.datetimeformat is not None:
+                    dateformat_fields[col] = self.opts.datetimeformat
+
         return dateformat_fields
 
 

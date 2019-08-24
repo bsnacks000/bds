@@ -2,7 +2,7 @@ import unittest
 import os
 
 from binx.collection import InternalObject, BaseSerializer, BaseCollection
-from binx.exceptions import InternalNotDefinedError, CollectionLoadError
+from binx.exceptions import InternalNotDefinedError, CollectionLoadError, CollectionValidationError
 
 import pandas as pd
 import numpy as np
@@ -24,15 +24,23 @@ class InternalDtypeTestSerializer(BaseSerializer):
     id = fields.Integer(allow_none=True)
     name = fields.Str(allow_none=True)
     number = fields.Float(allow_none=True)
-    date = fields.Date('%Y-%m-%d', allow_none=True)
-    datet = fields.DateTime('%Y-%m-%d %H:%M:%S', allow_none=True)
+    date = fields.Date( allow_none=True)
+    datet = fields.DateTime(allow_none=True)
     tf = fields.Bool(allow_none=True)
     some_list = fields.List(fields.Integer, allow_none=True)
 
+    class Meta:
+        dateformat = '%Y-%m-%d'
+        datetimeformat = '%Y-%m-%d %H:%M:%S'
+
 class DateStringFormatTestSerializer(BaseSerializer):
     a = fields.Integer()
-    b = fields.DateTime(format='%Y-%m-%d %H:%M:%S')
-    c = fields.Date(format='%Y-%m-%d')
+    b = fields.DateTime(datetimeformat='%Y-%m-%d %H:%M:%S')
+    c = fields.Date(dateformat='%Y-%m-%d')
+
+    class Meta:
+        dateformat = '%Y-%m-%d'
+        datetimeformat = '%Y-%m-%d %H:%M:%S'
 
 
 
@@ -57,7 +65,7 @@ class TestInternalObject(unittest.TestCase):
 class TestBaseSerializer(unittest.TestCase):
 
     def test_internal_class_kwarg(self):
-        s = InternalSerializer(internal=InternalObject, strict=True)
+        s = InternalSerializer(internal=InternalObject)
         self.assertTrue(hasattr(s, '_InternalClass'))
 
 
@@ -69,15 +77,15 @@ class TestBaseSerializer(unittest.TestCase):
 
     def test_serializer_post_load_hook_returns_internal_class(self):
 
-        s = InternalSerializer(internal=InternalObject, strict=True)
+        s = InternalSerializer(internal=InternalObject)
         data = [{'bdbid': 1, 'name': 'hi-there'}, {'bdbid': 2, 'name': 'hi-ho'}]
-        obj, _ = s.load(data, many=True)
+        obj = s.load(data, many=True)
         for i in obj:
             self.assertIsInstance(i, InternalObject)
 
     def test_serializer_get_numpy_dtypes(self):
 
-        s = InternalSerializer(internal=InternalObject, strict=True)
+        s = InternalSerializer(internal=InternalObject)
         data = [{'bdbid': 1, 'name': 'hi-there'}, {'bdbid': 2, 'name': 'hi-ho'}]
         obj, _ = s.load(data, many=True)
 
@@ -88,7 +96,7 @@ class TestBaseSerializer(unittest.TestCase):
 
     def test_serializer_dateformat_fields(self):
 
-        s = DateStringFormatTestSerializer(internal=InternalObject, strict=True)
+        s = DateStringFormatTestSerializer(internal=InternalObject)
         test = {'b': '%Y-%m-%d %H:%M:%S', 'c': '%Y-%m-%d'}
         self.assertDictEqual(test, s.dateformat_fields)
 
@@ -214,20 +222,29 @@ class TestBaseCollection(unittest.TestCase):
 
         new_base = base + base2
 
-    def test_base_collection_concatenation_throws_TypeError_on_wrong_type(self):
 
-        base = BaseCollection()
-        base.load_data(self.data)
+    def test_subclass_collection_concatentaion_throws_TypeError_on_wrong_type(self):
 
-        class DummyCollection(BaseCollection):
-            serializer_class = BaseSerializer
+        class TestSerializer(BaseSerializer):
+            bdbid = fields.Integer()
+            name = fields.String()
+
+        class DummyCollectionA(BaseCollection):
+            serializer_class = TestSerializer
             internal_class = InternalObject
 
-        d = DummyCollection()
+        class DummyCollectionB(BaseCollection):
+            serializer_class = TestSerializer
+            internal_class = InternalObject
+
+        d = DummyCollectionA()
         d.load_data(self.data)
 
+        e = DummyCollectionB()
+        e.load_data(self.data)
+
         with self.assertRaises(TypeError):
-            new_base = d + base
+            new_base = e + d
 
 
     def test_base_collection_to_dataframe(self):

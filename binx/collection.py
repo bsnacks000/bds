@@ -72,6 +72,7 @@ class BaseSerializer(Schema):
     def _set_dateformat_fields(self):
         """ builds a mapping of date formatted column names to string formats for Collection.load_data
         """
+        #XXX this is breaking in 3.0... need to look at Meta object. field level attrs for Date not supported
         dateformat_fields = {}
         for col,field in self.fields.items():
             if isinstance(field, fields.DateTime):
@@ -86,7 +87,7 @@ class BaseSerializer(Schema):
 
 
     @post_load
-    def load_object(self, data):
+    def load_object(self, data, **kwargs):
         """ loads and validates an internal class object """
         return self._InternalClass(**data)
 
@@ -179,7 +180,7 @@ class BaseCollection(AbstractCollection):
 
     def __init__(self):
         self._data = []
-        self._serializer = self.serializer_class(internal=self.__class__.internal_class, strict=True)
+        self._serializer = self.serializer_class(internal=self.__class__.internal_class)
         self.__collection_id = uuid.uuid4().hex
 
     @classmethod
@@ -207,8 +208,8 @@ class BaseCollection(AbstractCollection):
         """
         if len(self._data) == 0:
             return self._data
-        marshal_result = self.serializer.dump(self._data, many=True) # NOTE returns MarshalResult object
-        return marshal_result.data  # NOTE differs from 3.0.0 -- only returns records here
+        return self.serializer.dump(self._data, many=True) # NOTE returns MarshalResult object
+        #return marshal_result.data  # NOTE differs from 3.0.0 -- only returns records here
 
     @property
     def internal(self):
@@ -354,7 +355,7 @@ class BaseCollection(AbstractCollection):
 
             # append to the data dictionary
             # NOTE changing this to handle tuples in marsh 2.x
-            valid, _ = self.serializer.load(records, many=True)
+            valid = self.serializer.load(records, many=True)
             self._data += valid
 
         except TypeError as err:

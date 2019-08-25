@@ -15,6 +15,7 @@ binx
 
 :version: 0.4.0
 
+
 ``binx`` is a small Python framework for application data modeling and transformation. It's API relies heavily on `marshmallow
 <https://marshmallow.readthedocs.io/en/3.0/>`_ for validation, object serialization and storage. It's true purpose however is to expose an API that
 allows developers to model procedural code into directed, acyclic graphs of arbitrary complexity. A user can define an application or library as a

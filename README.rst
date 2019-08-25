@@ -13,7 +13,8 @@ binx
         :target: https://binx.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
-:version: 0.3.2
+:version: 0.4.0
+
 
 ``binx`` is a small Python framework for application data modeling and transformation. It's API relies heavily on `marshmallow
 <https://marshmallow.readthedocs.io/en/3.0/>`_ for validation, object serialization and storage. It's true purpose however is to expose an API that
@@ -24,10 +25,11 @@ guaranteeing data integrity along the way.
 The main goal of the project is to provide a simple API for data scientists, engineers or developers who write alot of procedural code
 to be able to organize their projects using a declarative style similar to how one might approach writing a web application using DRY principles.
 
+
 ==^..^==
 
 * Free software: MIT license
-* Documentation: https://binx.readthedocs.io.
+* Documentation: https://binx.readthedocs.io
 
 
 Features
@@ -38,6 +40,6 @@ This set of interfaces are designed to help you quickly scale up your notebooks/
 binx provides:
 
 * A declarative style in memory datastore (collections.py)
-* An delcarative ``Adapter`` API that helps model/manage relationships and data transformations between collections (adapter.py)
+* A declarative ``Adapter`` API that helps model/manage relationships and data transformations between collections (adapter.py)
 * consistent API for moving your data between json, py-objs, and pandas dataframes
 

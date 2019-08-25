@@ -72,21 +72,23 @@ class BaseSerializer(Schema):
     def _set_dateformat_fields(self):
         """ builds a mapping of date formatted column names to string formats for Collection.load_data
         """
+        #XXX this is breaking in 3.0... need to look at Meta object. field level attrs for Date not supported
         dateformat_fields = {}
         for col,field in self.fields.items():
-            if isinstance(field, fields.DateTime):
-                if field.dateformat is not None:
-                    dateformat_fields[col] = field.dateformat
-            elif isinstance(field, fields.Date):
-                if hasattr(field, 'dateformat'):
-                    dateformat_fields[col] = field.dateformat
+            if isinstance(field, fields.Date):
+                if self.opts.dateformat is not None:
+                    dateformat_fields[col] = self.opts.dateformat
                 else:
                     dateformat_fields[col] = '%Y-%m-%d' # we set this as a default for datetime.date based objects
+            elif isinstance(field, fields.DateTime):
+                if self.opts.datetimeformat is not None:
+                    dateformat_fields[col] = self.opts.datetimeformat
+
         return dateformat_fields
 
 
     @post_load
-    def load_object(self, data):
+    def load_object(self, data, **kwargs):
         """ loads and validates an internal class object """
         return self._InternalClass(**data)
 
@@ -166,20 +168,25 @@ class AbstractCollection(object, metaclass=AbstractCollectionMeta):
 class BaseCollection(AbstractCollection):
     """ Used to implement many of the default AbstractCollection methods
     Subclasses will mostly just need to define a custom Serializer and InternalObject pair
+
+    :param data: the data being passed into the serializer, could be a dataframe or list of records. If None
+
     """
     serializer_class = BaseSerializer   # must be overridden with a valid marshmallow schema and _Internal
     internal_class = InternalObject
 
     def __new__(cls, *args, **kwargs):
-        cls.serializer_class.registered_colls.add(cls)  #NOTE add a new subclass collection to the internal and internal class
+        cls.serializer_class.registered_colls.add(cls)  # register the cls here
         cls.internal_class.registered_colls.add(cls)
-        inst = super(BaseCollection, cls).__new__(cls, *args, **kwargs)
+        inst = super(BaseCollection, cls).__new__(cls)  # changed here 0.4 to allow args to be passed into __init__
         return inst
 
 
-    def __init__(self):
+    def __init__(self, data=None, **ma_kwargs):
         self._data = []
-        self._serializer = self.serializer_class(internal=self.__class__.internal_class, strict=True)
+        self._serializer = self.serializer_class(internal=self.__class__.internal_class, **ma_kwargs)
+        if data is not None:
+            self.load_data(data)
         self.__collection_id = uuid.uuid4().hex
 
     @classmethod
@@ -207,8 +214,8 @@ class BaseCollection(AbstractCollection):
         """
         if len(self._data) == 0:
             return self._data
-        marshal_result = self.serializer.dump(self._data, many=True) # NOTE returns MarshalResult object
-        return marshal_result.data  # NOTE differs from 3.0.0 -- only returns records here
+        return self.serializer.dump(self._data, many=True) # changed to update ma v3
+
 
     @property
     def internal(self):
@@ -261,7 +268,7 @@ class BaseCollection(AbstractCollection):
         """
         adapters = adapter_path(input_collection.__class__, cls)
         if len(adapters) == 0:  # return an empty list if no adapters can be found
-            return    
+            return
         try:
 
             current_context = adapter_context  # set starting point... these are instances and will be modified below
@@ -278,7 +285,7 @@ class BaseCollection(AbstractCollection):
                 adapter_output = current_adapter(current_input, **current_context) # adapt data to the next type of collection
                 current_context = {**current_context, **adapter_output.context} # NOTE this is will fail on py3.4
                 current_input = adapter_output.collection
-        
+
         except Exception as err:
             e = AdapterChainError('An error occurred within the adapter chain')
             e.context = current_context
@@ -354,7 +361,7 @@ class BaseCollection(AbstractCollection):
 
             # append to the data dictionary
             # NOTE changing this to handle tuples in marsh 2.x
-            valid, _ = self.serializer.load(records, many=True)
+            valid = self.serializer.load(records, many=True)
             self._data += valid
 
         except TypeError as err:

@@ -79,6 +79,37 @@ methods that hook into those as well.
     for d in new_coll:
        print(d.a)
 
+Starting in version **0.4** one can configure the underlying serializer with marshmallow kwargs for better control. We also allow
+data to be loaded directly via the constructor for convenience.
+
+.. code-block:: python
+
+    from marhsmallow import EXCLUDE
+
+    class MySerializer(BaseSerializer):
+        id = fields.Integer(required=True)
+        name = fields.String()
+        mydate = fields.Date()
+
+        class Meta:
+            dateformat = '%Y-%m-%d'
+
+    builder = CollectionBuilder()
+    MyCollection = builder.build(MySerializer)
+
+
+    data = [
+            {'id': 1, 'name': 'hep'},
+            {'id': 2, 'name': 'tups','mydate': '2017-07-01', 'random': 'thing'},
+            {'id': 3, 'who': 'am i'}
+        ]
+
+    # EXCLUDE is compatible with ma-2 behavior. bogus keys get dropped (default behavior throws a ValidationError)
+    # only will only output the specified fields
+    coll = BaseCollection(data, unknown=EXCLUDE, only=['id', 'name'])
+    coll.data           #returns [{'id': 1, 'name': 'hep'}, {'id': 2, 'name': 'tups'}, {'id': 3}]
+
+
 Ok, now in our project we need to perform several super complicated calculations. Starting with A we need to calculate B and cache it for later use before
 finally calculating C. Along the way the calculations perform side_effects that require extra arguments. Some of these extra args are even dependent on the
 previous results of the computation. Furthermore, some of the code relies on pandas/numpy and for some we need pure python. These situations happen often and can
@@ -164,12 +195,6 @@ to add some new features and plug some holes going forward.
  - introduce options to provide collection objects with more data integrity (key constraints, de-duplication etc.)
  - add types from the *typing* module for the library to help document signatures.
  - better API docs :)
-
-If anyone in the ether has interest in working on this project, feel free to drop me a line.
-
-*grazie mille,*
-
-*bsnacks*
 
 ==^.^==
 

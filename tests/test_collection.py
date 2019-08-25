@@ -2,12 +2,12 @@ import unittest
 import os
 
 from binx.collection import InternalObject, BaseSerializer, BaseCollection
-from binx.exceptions import InternalNotDefinedError, CollectionLoadError
+from binx.exceptions import InternalNotDefinedError, CollectionLoadError, CollectionValidationError
 
 import pandas as pd
 import numpy as np
 from pandas.testing import assert_frame_equal, assert_series_equal
-from marshmallow import fields
+from marshmallow import fields, INCLUDE, EXCLUDE
 from marshmallow.exceptions import ValidationError
 
 from datetime import datetime, date
@@ -24,15 +24,23 @@ class InternalDtypeTestSerializer(BaseSerializer):
     id = fields.Integer(allow_none=True)
     name = fields.Str(allow_none=True)
     number = fields.Float(allow_none=True)
-    date = fields.Date('%Y-%m-%d', allow_none=True)
-    datet = fields.DateTime('%Y-%m-%d %H:%M:%S', allow_none=True)
+    date = fields.Date( allow_none=True)
+    datet = fields.DateTime(allow_none=True)
     tf = fields.Bool(allow_none=True)
     some_list = fields.List(fields.Integer, allow_none=True)
 
+    class Meta:
+        dateformat = '%Y-%m-%d'
+        datetimeformat = '%Y-%m-%d %H:%M:%S'
+
 class DateStringFormatTestSerializer(BaseSerializer):
     a = fields.Integer()
-    b = fields.DateTime(format='%Y-%m-%d %H:%M:%S')
-    c = fields.Date(format='%Y-%m-%d')
+    b = fields.DateTime()
+    c = fields.Date()
+
+    class Meta:
+        dateformat = '%Y-%m-%d'
+        datetimeformat = '%Y-%m-%d %H:%M:%S'
 
 
 
@@ -57,7 +65,7 @@ class TestInternalObject(unittest.TestCase):
 class TestBaseSerializer(unittest.TestCase):
 
     def test_internal_class_kwarg(self):
-        s = InternalSerializer(internal=InternalObject, strict=True)
+        s = InternalSerializer(internal=InternalObject)
         self.assertTrue(hasattr(s, '_InternalClass'))
 
 
@@ -69,17 +77,17 @@ class TestBaseSerializer(unittest.TestCase):
 
     def test_serializer_post_load_hook_returns_internal_class(self):
 
-        s = InternalSerializer(internal=InternalObject, strict=True)
+        s = InternalSerializer(internal=InternalObject)
         data = [{'bdbid': 1, 'name': 'hi-there'}, {'bdbid': 2, 'name': 'hi-ho'}]
-        obj, _ = s.load(data, many=True)
+        obj = s.load(data, many=True)
         for i in obj:
             self.assertIsInstance(i, InternalObject)
 
     def test_serializer_get_numpy_dtypes(self):
 
-        s = InternalSerializer(internal=InternalObject, strict=True)
+        s = InternalSerializer(internal=InternalObject)
         data = [{'bdbid': 1, 'name': 'hi-there'}, {'bdbid': 2, 'name': 'hi-ho'}]
-        obj, _ = s.load(data, many=True)
+        obj = s.load(data, many=True)
 
         out = s.get_numpy_fields()
         self.assertEqual(out['bdbid'], np.dtype('int64'))
@@ -88,11 +96,44 @@ class TestBaseSerializer(unittest.TestCase):
 
     def test_serializer_dateformat_fields(self):
 
-        s = DateStringFormatTestSerializer(internal=InternalObject, strict=True)
+        s = DateStringFormatTestSerializer(internal=InternalObject)
         test = {'b': '%Y-%m-%d %H:%M:%S', 'c': '%Y-%m-%d'}
         self.assertDictEqual(test, s.dateformat_fields)
 
 
+    def test_extra_fields_raise_error(self):
+        # this is specific to ma 3
+        class ExtraFieldTestSerializer(BaseSerializer):
+            id = fields.Integer()
+            name = fields.Str()
+
+        data = [
+            {'id': 1, 'name': 'hep'},
+            {'id': 2, 'name': 'tups', 'what': 'is this'}
+        ]
+
+        s = ExtraFieldTestSerializer(internal=InternalObject)
+
+        with self.assertRaises(ValidationError):
+            s.load(data, many=True)
+
+
+    def test_required_true_expected_behavior(self):
+        # making sure this didn't change in ma3
+        class RequiredTrueTestSerializer(BaseSerializer):
+            id = fields.Integer(required=True)
+            name = fields.Str(required=False)
+            blah = fields.Str(required=False)
+
+
+        data = [
+            {'id': 1},
+            {'id': 2}
+        ]
+        s = RequiredTrueTestSerializer(internal=InternalObject)
+        works = s.load(data, many=True)
+        for w in works:
+            self.assertIsInstance(w, InternalObject)
 
 class TestBaseCollection(unittest.TestCase):
 
@@ -214,20 +255,29 @@ class TestBaseCollection(unittest.TestCase):
 
         new_base = base + base2
 
-    def test_base_collection_concatenation_throws_TypeError_on_wrong_type(self):
 
-        base = BaseCollection()
-        base.load_data(self.data)
+    def test_subclass_collection_concatentaion_throws_TypeError_on_wrong_type(self):
 
-        class DummyCollection(BaseCollection):
-            serializer_class = BaseSerializer
+        class TestSerializer(BaseSerializer):
+            bdbid = fields.Integer()
+            name = fields.String()
+
+        class DummyCollectionA(BaseCollection):
+            serializer_class = TestSerializer
             internal_class = InternalObject
 
-        d = DummyCollection()
+        class DummyCollectionB(BaseCollection):
+            serializer_class = TestSerializer
+            internal_class = InternalObject
+
+        d = DummyCollectionA()
         d.load_data(self.data)
 
+        e = DummyCollectionB()
+        e.load_data(self.data)
+
         with self.assertRaises(TypeError):
-            new_base = d + base
+            new_base = e + d
 
 
     def test_base_collection_to_dataframe(self):
@@ -426,4 +476,84 @@ class TestBaseCollection(unittest.TestCase):
         b.load_data(self.dtyp_test_data_all_none)
         df = b.to_dataframe() # would raise here
         self.assertIsInstance(df, pd.DataFrame)
+
+
+    def test_data_load_via_init_works_as_expected(self):
+
+        class TestInitSerializer(BaseSerializer):
+            id = fields.Integer(required=True)
+            name = fields.String()
+            mydate = fields.Date()
+
+            class Meta:
+                dateformat = '%Y-%m-%d'
+
+
+        BaseCollection.serializer_class = TestInitSerializer
+
+        data = [
+            {'id': 1, 'name': 'hep'},
+            {'id': 2, 'name': 'tups','mydate': '2017-07-01'}
+        ]
+
+        coll = BaseCollection(data)
+
+        for c in coll:
+            self.assertIsInstance(c, InternalObject)
+
+
+    def test_data_load_raises_validation_error(self):
+
+        class TestDataLoadSerializer(BaseSerializer):
+            id = fields.Integer(required=True)
+            name = fields.String()
+            mydate = fields.Date()
+
+            class Meta:
+                dateformat = '%Y-%m-%d'
+
+
+        BaseCollection.serializer_class = TestDataLoadSerializer
+
+        data = [
+            {'id': 1, 'name': 'hep'},
+            {'bad': 'idea'}
+        ]
+
+        with self.assertRaises(ValidationError):
+            coll = BaseCollection(data)
+
+
+
+    def test_ma_kwargs_in_constructor_pass_to_serializer(self):
+
+        class TestMaKwargsSerializer(BaseSerializer):
+            id = fields.Integer(required=True)
+            name = fields.String()
+            mydate = fields.Date()
+
+            class Meta:
+                dateformat = '%Y-%m-%d'
+
+
+        BaseCollection.serializer_class = TestMaKwargsSerializer
+
+        data = [
+            {'id': 1, 'name': 'hep'},
+            {'id': 2, 'name': 'tups','mydate': '2017-07-01', 'random': 'thing'},
+            {'id': 3, 'who': 'am i'} # test ma3 unknown=INCLUDE
+        ]
+
+        coll = BaseCollection(data, unknown=EXCLUDE)
+        expected = [{'id': 1, 'name': 'hep'},
+            {'id': 2, 'mydate': '2017-07-01', 'name': 'tups'},
+            {'id': 3}]
+
+        self.assertListEqual(coll.data, expected)
+
+        coll2 = BaseCollection(data, unknown=INCLUDE, only=['id', 'name'])
+        expected = [{'id': 1, 'name': 'hep'}, {'id': 2, 'name': 'tups'}, {'id': 3}]
+
+        self.assertListEqual(coll2.data, expected)
+
 

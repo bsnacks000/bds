@@ -37,3 +37,27 @@ Fixes some long standing issues and adds some new features.
 * collection.py - fixed errors related to creating dataframes from NoneType
 * adapter.py - added a new base class PluggableAdapter to ease development of the adapter chain
 * collection.py - CollectionBuilder.build now excepts an optional name arg. Will attempt to auto-parse name from serializer_class.
+
+
+0.3.1 (2019-07-15)
+------------------
+
+* Adds a context variable to the AdapterChainError that can be accessed if the error is caught
+
+
+0.3.2 (2019-08-21)
+------------------
+Final release that is compatible with marshmallow 2.x
+
+* Pins marshmallow to v0.20.2
+* Final release supporting marshmallow 2.x functionality
+
+
+0.4.0 (2019-08-23)
+------------------
+A minor release that internally breaks backward compatibility with marshmallow-2.x. Adds new feature
+to that allows loading data and setting ma configuration directly from Collection constructor.
+
+* private api changes to Serializer and Collection classes.
+* data can now be loaded via the Collection constructor.
+* kwargs can be passed to the underlying ma schema at runtime.

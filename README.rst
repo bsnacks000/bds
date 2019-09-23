@@ -13,7 +13,7 @@ binx
         :target: https://binx.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
-:version: 0.4.0
+:version: 0.4.1
 
 
 ``binx`` is a small Python framework for application data modeling and transformation. It's API relies heavily on `marshmallow

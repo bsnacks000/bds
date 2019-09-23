@@ -11,7 +11,7 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = ['pandas', 'marshmallow>=3.0' ]
+requirements = ['pandas', 'marshmallow==3.1.1' ]
 
 setup_requirements = [ ]
 

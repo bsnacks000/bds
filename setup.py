@@ -11,11 +11,11 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = ['pandas', 'marshmallow>=3' ]
+requirements = ['pandas>=0.23', 'marshmallow>=3.2' ]
 
 setup_requirements = [ ]
 
-test_requirements = [ 'nose ']
+test_requirements = [ 'nose']
 
 setup(
     author="bsnacks000",

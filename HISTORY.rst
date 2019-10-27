@@ -61,3 +61,14 @@ to that allows loading data and setting ma configuration directly from Collectio
 * private api changes to Serializer and Collection classes.
 * data can now be loaded via the Collection constructor.
 * kwargs can be passed to the underlying ma schema at runtime.
+
+
+0.4.1 (2019-09-23)
+------------------
+A patch that pins the library to marshmallow-v3.1.1
+
+
+0.4.2 (2019-10-27)
+------------------
+Bugfix that fixes the dependency in the previous patch. This version is compatible with marshmallow>=3.1.1.
+Also assures pandas>=0.23 in setup.py

@@ -56,16 +56,12 @@ class BaseSerializer(Schema):
 
     }
 
-
     def __init__(self, *args, **kwargs):
-
         if 'internal' in kwargs:
             self._InternalClass = kwargs.pop('internal')
         else:
             raise InternalNotDefinedError('An InternalObject class must be instantiated with this Collection')
-
-        super(Schema, self).__init__(*args, **kwargs)
-
+        super().__init__(*args, **kwargs)
         self.dateformat_fields = self._set_dateformat_fields()
 
 

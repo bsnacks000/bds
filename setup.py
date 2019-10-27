@@ -11,11 +11,11 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = ['pandas', 'marshmallow==3.1.1' ]
+requirements = ['pandas>=0.23', 'marshmallow>=3' ]
 
 setup_requirements = [ ]
 
-test_requirements = [ 'nose ']
+test_requirements = [ 'nose']
 
 setup(
     author="bsnacks000",
@@ -42,6 +42,6 @@ setup(
     test_suite='nose.collector',
     tests_require=test_requirements,
     url='https://github.com/bsnacks000/binx',
-    version='0.4.1',
+    version='0.4.2',
     zip_safe=False,
 )
